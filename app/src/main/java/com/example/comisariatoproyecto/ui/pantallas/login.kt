@@ -18,14 +18,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.comisariatoproyecto.data.r_permisos
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import okio.blackholeSink
 
-private val AzulOscuro = Color(0xFF132B5C)
-private val VerdeBoton = Color(0xFF12C48B)
-private val FondoPantalla = Color(0xFFF3F4F6)
+private val AzulOscuro = Color(0xFF8B5A2B)
+private val Cremaboton = Color(0xFFFFE4C4)
+private val FondoPantalla = Color(0xFF8B5A2B)
 private val Blanco = Color.White
 private val GrisTexto = Color(0xFF6B7280)
 private val GrisBorde = Color(0xFFD1D5DB)
 private val NegroSuave = Color(0xFF111827)
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun LoginComisariatoScreenPreview() {
+    LoginComisariatoScreen(
+        repo = r_permisos()
+    )
+}
+
+
 
 @Composable
 fun LoginComisariatoScreen(
@@ -35,24 +49,27 @@ fun LoginComisariatoScreen(
     var codigoEmpleado by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // 🔥 CONTROL DEL LOGIN
+    //  CONTROL DEL LOGIN
     var loginTrigger by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-
-    // 🔥 LAUNCHED EFFECT (BIEN USADO)
+    //validaciones
+    var errorCodigo by remember { mutableStateOf("") }
+    var errorPassword by remember { mutableStateOf("") }
+    //  LAUNCHED EFFECT (BIEN USADO)
     LaunchedEffect(loginTrigger) {
         if (loginTrigger) {
             isLoading = true
 
-            // 🔥 AQUÍ VA TU LOGIN (Firebase después)
-            kotlinx.coroutines.delay(1500)
+            val ok = repo.login(codigoEmpleado.trim(), password)
 
             isLoading = false
             loginTrigger = false
 
-            // Simulamos éxito
-            onLoginSuccess()
-            val ok = repo.login(codigoEmpleado, password)
+            if (ok) {
+                onLoginSuccess()
+            } else {
+                errorPassword = "Credenciales incorrectas"
+            }
         }
     }
 
@@ -85,7 +102,7 @@ fun LoginComisariatoScreen(
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(top = 120.dp) // 🔥 CONTROLÁS LA POSICIÓN
+                        modifier = Modifier.padding(top = 200.dp) // 🔥 CONTROLÁS LA POSICIÓN
                     ) {
 
                         Text(
@@ -132,19 +149,31 @@ fun LoginComisariatoScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text("Código de empleado")
+                        Text("Correo electronico")
 
                         OutlinedTextField(
                             value = codigoEmpleado,
-                            onValueChange = { codigoEmpleado = it },
+                            onValueChange = {
+                                codigoEmpleado = it
+                                errorCodigo = ""
+                            },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Ej: EMP-2024-1542") },
+                            placeholder = { Text("Ej: tuuser@gmail.com") },
                             leadingIcon = {
                                 Icon(Icons.Outlined.Person, contentDescription = null)
                             },
                             singleLine = true,
+                            isError = errorCodigo.isNotEmpty(),
                             shape = RoundedCornerShape(10.dp)
                         )
+
+                        if (errorCodigo.isNotEmpty()) {
+                            Text(
+                                text = errorCodigo,
+                                color = Color.Red,
+                                fontSize = 12.sp
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -152,7 +181,10 @@ fun LoginComisariatoScreen(
 
                         OutlinedTextField(
                             value = password,
-                            onValueChange = { password = it },
+                            onValueChange = {
+                                password = it
+                                errorPassword = ""
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = { Text("********") },
                             leadingIcon = {
@@ -160,22 +192,55 @@ fun LoginComisariatoScreen(
                             },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
+                            isError = errorPassword.isNotEmpty(),
                             shape = RoundedCornerShape(10.dp)
                         )
+
+                        if (errorPassword.isNotEmpty()) {
+                            Text(
+                                text = errorPassword,
+                                color = Color.Red,
+                                fontSize = 12.sp
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
                         Button(
-                            onClick = { loginTrigger = true },
+                            onClick = {
+                                errorCodigo = ""
+                                errorPassword = ""
+
+                                var valido = true
+
+                                if (codigoEmpleado.isEmpty()) {
+                                    errorCodigo = "El correo es obligatorio"
+                                    valido = false
+                                }
+
+                                if (password.isEmpty()) {
+                                    errorPassword = "La contraseña es obligatoria"
+                                    valido = false
+                                }
+
+                                if (valido) {
+                                    loginTrigger = true
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = VerdeBoton
+                                containerColor = Cremaboton
                             ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("Ingresar")
+                            Text(
+                                "Ingresar",
+                                color = NegroSuave,
+                                fontWeight = FontWeight.Bold
+
+                            )
 
                         }
 

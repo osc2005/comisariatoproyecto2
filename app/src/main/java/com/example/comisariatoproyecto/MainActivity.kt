@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,66 +18,145 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.comisariatoproyecto.data.r_permisos
 import com.example.comisariatoproyecto.ui.pantallas.LoginComisariatoScreen
+import com.example.comisariatoproyecto.ui.pantallas.MenuInferiorComisariato
+import com.example.comisariatoproyecto.ui.pantallas.PantallaCatalogo
+import com.example.comisariatoproyecto.ui.pantallas.PantallaCredito
+import com.example.comisariatoproyecto.ui.pantallas.PantallaInicio
+import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO) // 🔥
         enableEdgeToEdge()
+
         setContent {
             ComisariatoProyectoTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
+
                 ) {
-                    val nav = rememberNavController()
-                    val repoAuth = remember { r_permisos() }
-                    var startDestination by remember { mutableStateOf<String?>(null) }
-
-
-                    // Lógica de verificación de sesión
-                    LaunchedEffect(Unit) {
-                        try {
-                            val logged = repoAuth.isLogged()
-                            startDestination = if (logged) "inicio" else "login"
-                        } catch (e: Exception) {
-                            startDestination = "login"
-                        }
-                    }
-                    if (startDestination == null) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        NavHost(
-                            navController = nav,
-                            startDestination = startDestination!!
-                        ) {
-                            composable("login") {
-                                // Asegúrate de que la función Login esté definida
-                                LoginComisariatoScreen(
-                                    repo = repoAuth,
-                                    onLoginSuccess = {
-                                        nav.navigate("inicio")
-                                    }
-                                )
-                            }
-
-                        }
-                    }
+                    AppNavigation()
                 }
             }
         }
     }
 }
+
+@Composable
+fun AppNavigation() {
+    val nav = rememberNavController()
+    val repoAuth = remember { r_permisos() }
+    var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val logged = repoAuth.isLogged()
+            startDestination = if (logged) "inicio" else "login"
+        } catch (e: Exception) {
+            startDestination = "login"
+        }
+    }
+
+    if (startDestination == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else {
+        val navBackStackEntry by nav.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+
+        val mostrarMenu =
+            currentRoute == "inicio" ||
+                    currentRoute == "catalogo" ||
+                    currentRoute == "credito" ||
+                    currentRoute == "perfil"
+
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+                if (mostrarMenu) {
+                    MenuInferiorComisariato(
+                        itemSeleccionado = when (currentRoute) {
+                            "inicio" -> "Inicio"
+                            "catalogo" -> "Catálogo"
+                            "credito" -> "Mi Crédito"
+                            "perfil" -> "Perfil"
+                            else -> "Inicio"
+                        },
+                        onItemClick = { item ->
+                            val ruta = when (item) {
+                                "Inicio" -> "inicio"
+                                "Catálogo" -> "catalogo"
+                                "Mi Crédito" -> "credito"
+                                "Perfil" -> "perfil"
+                                else -> "inicio"
+                            }
+
+                            nav.navigate(ruta) {
+                                popUpTo("inicio") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+            }
+        ) { innerPadding ->
+
+            NavHost(
+                navController = nav,
+                startDestination = startDestination!!,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable("login") {
+                    LoginComisariatoScreen(
+                        repo = repoAuth,
+                        onLoginSuccess = {
+                            nav.navigate("inicio") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
+                composable("inicio") {
+                    PantallaInicio()
+                }
+
+                composable("catalogo") {
+                    PantallaCatalogo()
+                }
+
+                composable("credito") {
+                    PantallaCredito()
+                }
+
+                composable("perfil") {
+                    PerfilScreen()
+                }
+            }
+        }
+    }
+}
+
+
+
+
 
 
