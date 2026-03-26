@@ -1,6 +1,11 @@
 package com.example.comisariatoproyecto
 
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -22,6 +27,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -40,7 +47,7 @@ import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
 import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO) // 🔥
@@ -176,12 +183,59 @@ fun AppNavigation() {
                 }
 
                 composable("perfil") {
-                    PerfilScreen()
+                    PerfilScreen(
+                        repo = repoAuth,
+                    onLogout = {
+                            repoAuth.logout()
+                            nav.navigate("login")
+                            {
+                                popUpTo("inicio") { inclusive = true }
+                            }
+
+                        }
+                    )
                 }
             }
         }
     }
 }
+
+
+
+fun autenticarConBiometria(
+    activity: FragmentActivity,
+    onExito: () -> Unit
+) {
+    val executor = ContextCompat.getMainExecutor(activity)
+    val biometricPrompt = BiometricPrompt(
+        activity, executor,
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                // Usamos un Handler para dar un respiro de 100ms y que el diálogo se cierre bien
+                Handler(Looper.getMainLooper()).postDelayed({
+                    onExito()
+                }, 100)
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                // Loguear el error ayuda a saber por qué falló
+                Log.e("BIOMETRIA", "Error: $errString")
+            }
+        })
+
+    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        .setTitle("Acceso de Seguridad")
+        .setSubtitle("Usa tu PIN, Patrón o Rostro")
+        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+        .setConfirmationRequired(false) // Esto hace que entre directo al validar
+        .build()
+
+    biometricPrompt.authenticate(promptInfo)
+}
+
+
 
 
 

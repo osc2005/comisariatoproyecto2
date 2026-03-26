@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.tv.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -81,5 +82,8 @@ dependencies {
 
     //dependencia de iconos
     implementation("androidx.compose.material:material-icons-extended")
+
+    //dependencia de huella
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
 }
