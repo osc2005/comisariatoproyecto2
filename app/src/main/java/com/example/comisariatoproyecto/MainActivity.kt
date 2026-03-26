@@ -33,13 +33,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.comisariatoproyecto.data.m_Categoria
+import com.example.comisariatoproyecto.data.r_Categoria
+import com.example.comisariatoproyecto.data.r_Productos
 import com.example.comisariatoproyecto.data.r_permisos
+import com.example.comisariatoproyecto.ui.pantallas.ListaProductos
 import com.example.comisariatoproyecto.ui.pantallas.LoginComisariatoScreen
 import com.example.comisariatoproyecto.ui.pantallas.MenuInferiorComisariato
 import com.example.comisariatoproyecto.ui.pantallas.PantallaCatalogo
 import com.example.comisariatoproyecto.ui.pantallas.PantallaCredito
 import com.example.comisariatoproyecto.ui.pantallas.PantallaInicio
 import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
+import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
 
 class MainActivity : FragmentActivity() {
@@ -147,7 +152,30 @@ fun AppNavigation() {
                 }
 
                 composable("catalogo") {
-                    PantallaCatalogo()
+                    ProductosCatalogo (
+                        repo = remember { r_Categoria() },
+                        onBack = { nav.popBackStack() },
+                        onVerProductos = { categoria ->
+                            // Pasas el id por la ruta
+                            nav.navigate("productos/${categoria.id}/${categoria.nombre}")
+                        }
+                    )
+                }
+
+                composable("productos/{categoriaId}/{categoriaNombre}") { backStack ->
+                    val categoriaId = backStack.arguments?.getString("categoriaId") ?: return@composable
+                    val categoriaNombre = backStack.arguments?.getString("categoriaNombre") ?: ""
+
+                    val categoria = remember(categoriaId) {
+                        m_Categoria(id = categoriaId, nombre = categoriaNombre)
+                    }
+
+                    ListaProductos (
+                        categoria = categoria,
+                        repo = remember { r_Productos() },
+                        onBack = { nav.popBackStack() },
+                        onVerDetalle = { /* opcional: navegar al detalle del producto */ }
+                    )
                 }
 
                 composable("credito") {
