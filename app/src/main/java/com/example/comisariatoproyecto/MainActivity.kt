@@ -71,6 +71,8 @@ class MainActivity : FragmentActivity() {
 fun AppNavigation() {
     val nav = rememberNavController()
     val repoAuth = remember { r_permisos() }
+    val repocat = remember { r_Categoria() }
+    val repoprod = remember { r_Productos() }
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -155,12 +157,14 @@ fun AppNavigation() {
 
                 composable("catalogo") {
                     ProductosCatalogo (
-                        repo = remember { r_Categoria() },
+                        repoCategoria = repocat,
+                        repoProducto = repoprod ,
                         onBack = { nav.popBackStack() },
                         onVerProductos = { categoria ->
                             // Pasas el id por la ruta
                             nav.navigate("productos/${categoria.id}/${categoria.nombre}")
-                        }
+                        },
+                        onVerDetalleProducto = { prod -> nav.navigate("detalle/${prod.id}") }
                     )
                 }
 
