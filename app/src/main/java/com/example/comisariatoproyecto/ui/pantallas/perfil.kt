@@ -177,6 +177,7 @@ onLogout: () -> Unit
                         }
                     }
 
+
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Sección de datos
