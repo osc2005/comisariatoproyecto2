@@ -231,27 +231,30 @@ onLogout: () -> Unit
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    OutlinedCard(
+                    Button(
+                        onClick = { onLogout() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(60.dp)
-                            .clickable { onLogout() },
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(2.dp, ColorCafe),
-                        elevation = CardDefaults.outlinedCardElevation(
-                            defaultElevation = 1.dp
+                            .height(55.dp),
+
+                        border = BorderStroke(1.dp, ColorCafe),
+
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ColorCafe
                         ),
-                        colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent)
+                        shape = RoundedCornerShape(12.dp),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión", tint = ColorCafe)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Cerrar sesión", color = ColorCafe)
-                        }
+                        Icon(
+                            Icons.Default.ExitToApp,
+                            contentDescription = "Cerrar sesión",
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Cerrar sesión",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

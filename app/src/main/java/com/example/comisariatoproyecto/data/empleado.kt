@@ -12,7 +12,7 @@ data class Empleado(
     val estado: String             = "",
     val fechaRegistro: Timestamp?  = null,
     val nombres: String            = "",
-    val salario: Any?              = null, // Any? evita crash si Firestore lo guarda como String o Number
+    val salario: Double = 0.0, // Any? evita crash si Firestore lo guarda como String o Number
     val telefono: String           = ""
 )
 

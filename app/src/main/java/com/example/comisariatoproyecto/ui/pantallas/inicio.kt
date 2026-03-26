@@ -21,6 +21,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.comisariatoproyecto.data.Empleado
+import com.example.comisariatoproyecto.data.r_permisos
 
 // Paleta consistente con el login y el menú inferior
 private val Cafe       = Color(0xFF8B5A2B)
@@ -32,21 +34,25 @@ private val NegroSuave = Color(0xFF111827)
 private val GrisTexto  = Color(0xFF6B7280)
 private val VerdeOk    = Color(0xFF22C55E)
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun PantallaInicioPreview() {
-    PantallaInicio()
-}
+
 
 @Composable
-fun PantallaInicio() {
+fun PantallaInicio(repo: r_permisos) {
+    var empleado by remember { mutableStateOf<Empleado?>(null) }
+
+
+
+    LaunchedEffect(Unit) {
+        empleado = repo.obtenerMiPerfilEmpleado()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(FondoGris)
             .verticalScroll(rememberScrollState())
     ) {
-        HeaderInicio()
+        HeaderInicio(empleado = empleado)
 
         Column(
             modifier = Modifier
@@ -54,7 +60,7 @@ fun PantallaInicio() {
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-            TarjetaLineaCredito()
+            TarjetaLineaCredito(empleado = empleado)
             Spacer(modifier = Modifier.height(14.dp))
             TarjetaProximoPago()
             Spacer(modifier = Modifier.height(14.dp))
@@ -70,7 +76,7 @@ fun PantallaInicio() {
 // HEADER
 // ----------------------------------------------------------------------------
 @Composable
-fun HeaderInicio() {
+fun HeaderInicio(empleado: Empleado?) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -110,7 +116,7 @@ fun HeaderInicio() {
             // TODO: traer nombre del usuario logueado
             // colección: usuarios, campo: nombre
             Text(
-                text = "Hola, Carlos",
+                text = "Hola, ${empleado?.nombreCompleto}",
                 color = Blanco,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
@@ -128,7 +134,11 @@ fun HeaderInicio() {
 // TARJETA: LÍNEA DE CRÉDITO
 // ----------------------------------------------------------------------------
 @Composable
-fun TarjetaLineaCredito() {
+fun TarjetaLineaCredito(
+    empleado: Empleado?
+) {
+
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -153,7 +163,7 @@ fun TarjetaLineaCredito() {
                 // colección empleados: campo limiteCredito
                 // colección creditos: campo saldoPendiente
                 Text(
-                    text = "Disponible: L. 6,500",
+                    text = "Disponible: ${empleado?.salario}",
                     fontSize = 12.sp,
                     color = VerdeOk,
                     fontWeight = FontWeight.Medium
@@ -186,7 +196,9 @@ fun TarjetaLineaCredito() {
                 // TODO: credito.totalCredito (colección: creditos, campo: totalCredito)
                 Text(text = "Utilizado: L. 3,500", fontSize = 12.sp, color = GrisTexto)
                 // TODO: empleado.limiteCredito (colección: empleados, campo: limiteCredito)
-                Text(text = "Total: L. 10,000", fontSize = 12.sp, color = NegroSuave, fontWeight = FontWeight.Medium)
+                val disponible = (empleado?.salario ?: 0.0) * 0.25
+                
+                Text(text = "Total disponible: ${disponible}", fontSize = 12.sp, color = NegroSuave, fontWeight = FontWeight.Medium)
             }
         }
     }

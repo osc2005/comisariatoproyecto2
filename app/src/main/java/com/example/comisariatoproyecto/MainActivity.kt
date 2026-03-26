@@ -148,7 +148,9 @@ fun AppNavigation() {
                 }
 
                 composable("inicio") {
-                    PantallaInicio()
+                    PantallaInicio(
+                        repo = repoAuth
+                    )
                 }
 
                 composable("catalogo") {
