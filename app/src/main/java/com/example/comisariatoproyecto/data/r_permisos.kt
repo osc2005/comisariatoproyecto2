@@ -7,6 +7,9 @@ import kotlinx.coroutines.tasks.await
 
 class r_permisos {
 
+    // aqui en R_permisos esta el log in y el perfil. De aqui se jala
+    //todo de estas dos pantallas
+
     private val auth = FirebaseAuth.getInstance()
     private val db   = FirebaseFirestore.getInstance()
 
