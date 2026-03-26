@@ -14,6 +14,20 @@ class r_Productos {
 
     private  val db = FirebaseFirestore.getInstance()
 
+    fun obtenerProductos(): Flow<List<m_Productos>> = callbackFlow {
+        val listener = db.collection("productos")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+
+                val productos = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(m_Productos::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+
+                trySend(productos)
+            }
+        awaitClose { listener.remove() }
+    }
+
     fun obtenerProductosPorCategoria(categoriaId: String): Flow<List<m_Productos>> = callbackFlow {
         val listener = db.collection("productos")
             .whereEqualTo("categoriaId", categoriaId)
