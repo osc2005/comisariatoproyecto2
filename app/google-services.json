@@ -1,33 +1,33 @@
 {
   "project_info": {
-    "project_number": "369910369846",
-    "project_id": "proyectomovilweb",
-    "storage_bucket": "proyectomovilweb.firebasestorage.app"
+    "project_number": "559691697302",
+    "project_id": "comisariatosproyecto",
+    "storage_bucket": "comisariatosproyecto.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:369910369846:android:24c4e154a75e13b938d297",
+        "mobilesdk_app_id": "1:559691697302:android:e63955ba36da87855306b7",
         "android_client_info": {
           "package_name": "com.example.comisariatoproyecto"
         }
       },
       "oauth_client": [
         {
-          "client_id": "369910369846-jg2qe6u627qo44fhjlt5fgah4he90baf.apps.googleusercontent.com",
+          "client_id": "559691697302-289a09v464msgc10site5a6ms20aep0s.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCUZG-8ngNT-_8ndleBVNeLeKsJIvVWvO0"
+          "current_key": "AIzaSyCmybKHrEvtppAzbPGGTyMlkFknnGtFNWU"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "369910369846-jg2qe6u627qo44fhjlt5fgah4he90baf.apps.googleusercontent.com",
+              "client_id": "559691697302-289a09v464msgc10site5a6ms20aep0s.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

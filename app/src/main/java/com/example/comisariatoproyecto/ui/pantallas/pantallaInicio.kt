@@ -1,10 +1,13 @@
 package com.example.comisariatoproyecto.ui.pantallas
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Home
@@ -23,6 +26,8 @@ private val cafeActivo = Color(0xFF8B5A2B)
 private val GrisInactivo = Color(0xFF6B7280)
 private val FondoMenu = Color(0xFFF7F7F7)
 private val RojoLinea = Color(0xFF8B0000)
+
+val RusticAccent = Color(0xFF8B5A2B)
 
 @Composable
 fun MenuInferiorComisariato(
@@ -73,6 +78,7 @@ fun MenuInferiorComisariato(
                 }
             }
         }
+
     }
 }
 
@@ -82,6 +88,7 @@ fun ItemMenu(
     seleccionado: Boolean,
     onItemClick: (String) -> Unit,
     icono: @Composable () -> Unit
+
 ) {
     val color = if (seleccionado) cafeActivo else GrisInactivo
 
@@ -110,4 +117,8 @@ fun ItemMenu(
             fontWeight = if (seleccionado) FontWeight.Medium else FontWeight.Normal
         )
     }
+
+
 }
+
+
