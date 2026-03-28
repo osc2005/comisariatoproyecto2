@@ -161,7 +161,12 @@ fun AppNavigation() {
 
                 composable("inicio") {
                     PantallaInicio(
-                        repo = repoAuth
+                        repo = repoAuth,
+                        onLogout = {
+                            nav.navigate("login") {
+                                popUpTo("inicio") { inclusive = true }
+                            }
+                        }
                     )
                 }
 

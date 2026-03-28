@@ -7,7 +7,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.rememberNavController
 import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.r_permisos
 
@@ -33,7 +36,8 @@ private val GrisTexto = Color(0xFF6B7280)
 private val VerdeOk = Color(0xFF22C55E)
 
 @Composable
-fun PantallaInicio(repo: r_permisos) {
+fun PantallaInicio(repo: r_permisos,
+                   onLogout: () -> Unit) {
     var empleado by remember { mutableStateOf<Empleado?>(null) }
     var cargando by remember { mutableStateOf(true) }
 
@@ -61,7 +65,9 @@ fun PantallaInicio(repo: r_permisos) {
             .background(FondoGris)
             .verticalScroll(rememberScrollState())
     ) {
-        HeaderInicio(empleado = empleado)
+        HeaderInicio(empleado = empleado,
+            onLogout= onLogout
+        )
 
         Column(
             modifier = Modifier
@@ -82,7 +88,10 @@ fun PantallaInicio(repo: r_permisos) {
 }
 
 @Composable
-fun HeaderInicio(empleado: Empleado?) {
+fun HeaderInicio(
+    empleado: Empleado?,
+    onLogout: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -101,19 +110,39 @@ fun HeaderInicio(empleado: Empleado?) {
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Blanco.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notificaciones",
-                        tint = Blanco,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Blanco.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = "Notificaciones",
+                            tint = Blanco,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { onLogout() },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Blanco.copy(alpha = 0.15f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ExitToApp,
+                            contentDescription = "Cerrar sesión",
+                            tint = Blanco
+                        )
+                    }
                 }
             }
 
@@ -125,8 +154,9 @@ fun HeaderInicio(empleado: Empleado?) {
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
             )
+
             Text(
-                text = "Bienvenido de vuelta a tu Concierge Financiero.",
+                text = "Bienvenido de vuelta .",
                 color = Blanco.copy(alpha = 0.85f),
                 fontSize = 13.sp
             )
