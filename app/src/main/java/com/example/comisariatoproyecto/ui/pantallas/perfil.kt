@@ -1,16 +1,22 @@
 package com.example.comisariatoproyecto.ui.pantallas
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.AdminPanelSettings
+import androidx.compose.material.icons.outlined.AlternateEmail
+import androidx.compose.material.icons.outlined.AssignmentInd
+import androidx.compose.material.icons.outlined.AttachMoney
+import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.Business
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,23 +25,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.comisariatoproyecto.data.Empleado
+import com.example.comisariatoproyecto.data.Usuario
 import com.example.comisariatoproyecto.data.r_permisos
 
 private val ColorCafe  = Color(0xFF8B5A2B)
 private val ColorCrema = Color(0xFFFFF8F0)
 private val ColorGris  = Color(0xFF6B7280)
-
-val RusticText = Color.Black
+private val ColorNegro = Color(0xFF111827)
+private val VerdeOk    = Color(0xFF22C55E)
 
 @Composable
-fun PerfilScreen(repo: r_permisos,
-onLogout: () -> Unit
-) {
+fun PerfilScreen(repo: r_permisos) {
 
-
+    var usuario  by remember { mutableStateOf<Usuario?>(null) }
     var empleado by remember { mutableStateOf<Empleado?>(null) }
     var cargando by remember { mutableStateOf(true) }
     var error    by remember { mutableStateOf("") }
@@ -43,17 +49,17 @@ onLogout: () -> Unit
 
     LaunchedEffect(reintentar) {
         cargando = true
-
-        error    = ""
+        error = ""
         try {
-            val resultado = repo.obtenerMiPerfilEmpleado()
-            if (resultado != null) {
-                empleado = resultado
+            val (u, e) = repo.obtenerMiPerfilCompleto()
+            if (u != null) {
+                usuario  = u
+                empleado = e
             } else {
-                error = "No se encontró tu perfil.\nVerifica que tu correo esté registrado en el sistema."
+                error = "No se encontró tu perfil.\nVerifica que tu correo esté registrado."
             }
-        } catch (e: Exception) {
-            error = "Error al cargar perfil: ${e.localizedMessage}"
+        } catch (ex: Exception) {
+            error = "Error: ${ex.localizedMessage ?: "Error desconocido"}"
         } finally {
             cargando = false
         }
@@ -65,6 +71,7 @@ onLogout: () -> Unit
             .background(ColorCrema)
     ) {
         when {
+            // ── CARGANDO ────────────────────────────────────────────────────
             cargando -> {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
@@ -72,7 +79,7 @@ onLogout: () -> Unit
                 )
             }
 
-
+            // ── ERROR ────────────────────────────────────────────────────────
             error.isNotEmpty() -> {
                 Column(
                     modifier = Modifier
@@ -91,7 +98,7 @@ onLogout: () -> Unit
                         text = error,
                         color = ColorGris,
                         fontSize = 14.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
@@ -103,13 +110,14 @@ onLogout: () -> Unit
                 }
             }
 
-            empleado != null -> {
+            // ── CONTENIDO ────────────────────────────────────────────────────
+            usuario != null -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Header con avatar
+                    // HEADER
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -117,14 +125,15 @@ onLogout: () -> Unit
                                 color = ColorCafe,
                                 shape = RoundedCornerShape(
                                     bottomStart = 28.dp,
-                                    bottomEnd = 28.dp
+                                    bottomEnd   = 28.dp
                                 )
                             )
                             .padding(top = 48.dp, bottom = 28.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // Avatar con iniciales
+
+                            // Avatar con inicial
                             Box(
                                 modifier = Modifier
                                     .size(80.dp)
@@ -132,11 +141,13 @@ onLogout: () -> Unit
                                     .background(Color.White.copy(alpha = 0.2f)),
                                 contentAlignment = Alignment.Center
                             ) {
+                                val inicial = empleado?.nombres
+                                    ?.firstOrNull()?.uppercaseChar()?.toString()
+                                    ?: usuario!!.nombre.firstOrNull()
+                                        ?.uppercaseChar()?.toString()
+                                    ?: "?"
                                 Text(
-                                    text = empleado!!.nombres
-                                        .firstOrNull()
-                                        ?.uppercaseChar()
-                                        ?.toString() ?: "?",
+                                    text = inicial,
                                     fontSize = 36.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -145,8 +156,10 @@ onLogout: () -> Unit
 
                             Spacer(modifier = Modifier.height(12.dp))
 
+                            // Nombre completo desde empleados
                             Text(
-                                text = empleado!!.nombreCompleto,
+                                text = empleado?.nombreCompleto
+                                    ?: usuario!!.nombre.ifEmpty { "Sin nombre" },
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -154,20 +167,34 @@ onLogout: () -> Unit
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Badge de estado
+                            // Rol desde usuarios
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
-                                color = if (empleado!!.estaActivo)
-                                    Color(0xFF22C55E).copy(alpha = 0.2f)
-                                else
-                                    Color.Red.copy(alpha = 0.2f)
+                                color = Color.White.copy(alpha = 0.15f)
                             ) {
                                 Text(
-                                    text = if (empleado!!.estaActivo) "● Activo" else "● Inactivo",
-                                    color = if (empleado!!.estaActivo)
-                                        Color(0xFF86EFAC)
-                                    else
-                                        Color(0xFFFCA5A5),
+                                    text = usuario!!.rolNombre.ifEmpty { "Sin rol" },
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(
+                                        horizontal = 12.dp, vertical = 4.dp
+                                    )
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Estado desde empleados (con fallback a usuarios)
+                            val activo = empleado?.estaActivo ?: usuario!!.estaActivo
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (activo) VerdeOk.copy(alpha = 0.2f)
+                                else Color.Red.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = if (activo) "● Activo" else "● Inactivo",
+                                    color = if (activo) Color(0xFF86EFAC)
+                                    else Color(0xFFFCA5A5),
                                     fontSize = 12.sp,
                                     modifier = Modifier.padding(
                                         horizontal = 12.dp, vertical = 4.dp
@@ -177,90 +204,84 @@ onLogout: () -> Unit
                         }
                     }
 
-
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Sección de datos
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        TextoSeccion("Información personal")
+                        // SECCIÓN 1: Datos personales (de empleados)
+                        TextoSeccion("Datos personales")
 
                         TarjetaDato(
-                            icono = Icons.Outlined.Email,
-                            etiqueta = "Correo",
-                            valor = empleado!!.correo
-                        )
-                        TarjetaDato(
-                            icono = Icons.Outlined.Badge,
+                            icono    = Icons.Outlined.Badge,
                             etiqueta = "Código de empleado",
-                            valor = empleado!!.codigoEmpleado
+                            valor    = empleado?.codigoEmpleado ?: "—"
                         )
                         TarjetaDato(
-                            icono = Icons.Outlined.CreditCard,
+                            icono    = Icons.Outlined.AssignmentInd,
                             etiqueta = "DNI",
-                            valor = empleado!!.dni
+                            valor    = empleado?.dni ?: "—"
                         )
                         TarjetaDato(
-                            icono = Icons.Outlined.Phone,
+                            icono    = Icons.Outlined.Phone,
                             etiqueta = "Teléfono",
-                            valor = empleado!!.telefono
+                            valor    = empleado?.telefono ?: "—"
+                        )
+                        TarjetaDato(
+                            icono    = Icons.Outlined.CalendarMonth,
+                            etiqueta = "Fecha de ingreso",
+                            valor    = empleado?.fechaFormateada ?: "—"
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
-                        TextoSeccion("Información laboral")
+
+                        // SECCIÓN 2: Datos laborales (de empleados)
+                        TextoSeccion("Datos laborales")
 
                         TarjetaDato(
-                            icono = Icons.Outlined.AttachMoney,
+                            icono    = Icons.Outlined.Business,
+                            etiqueta = "Departamento",
+                            valor    = empleado?.departamentoNombre ?: "—"
+                        )
+                        TarjetaDato(
+                            icono    = Icons.Outlined.AttachMoney,
                             etiqueta = "Salario",
-                            valor = empleado!!.salarioFormateado
+                            valor    = empleado?.salarioFormateado ?: "—"
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // SECCIÓN 3: Información de cuenta (de usuarios)
+                        TextoSeccion("Información de cuenta")
+
+                        TarjetaDato(
+                            icono    = Icons.Outlined.Email,
+                            etiqueta = "Correo institucional",
+                            valor    = usuario!!.correo
                         )
                         TarjetaDato(
-                            icono = Icons.Outlined.AttachMoney,
-                            etiqueta = "Credito",
-                            valor = "------"
+                            icono    = Icons.Outlined.AlternateEmail,
+                            etiqueta = "Correo personal",
+                            valor    = usuario!!.correoPersonal.ifEmpty { "—" }
                         )
                         TarjetaDato(
-                            icono = Icons.Outlined.CalendarMonth,
-                            etiqueta = "Fecha de registro",
-                            valor = empleado!!.fechaFormateada
+                            icono    = Icons.Outlined.AdminPanelSettings,
+                            etiqueta = "Rol",
+                            valor    = usuario!!.rolNombre.ifEmpty { "—" }
                         )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { onLogout() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(55.dp),
-
-                        border = BorderStroke(1.dp, ColorCafe),
-
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ColorCafe
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.ExitToApp,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Cerrar sesión",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
         }
     }
 }
+
+// ── COMPOSABLES PRIVADOS ─────────────────────────────────────────────────────
 
 @Composable
 private fun TextoSeccion(texto: String) {
@@ -299,16 +320,12 @@ private fun TarjetaDato(
             )
             Spacer(modifier = Modifier.width(14.dp))
             Column {
+                Text(text = etiqueta, fontSize = 11.sp, color = ColorGris)
                 Text(
-                    text = etiqueta,
-                    fontSize = 11.sp,
-                    color = ColorGris
-                )
-                Text(
-                    text = valor.ifEmpty { "—" },
+                    text = valor,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF111827)
+                    color = ColorNegro
                 )
             }
         }

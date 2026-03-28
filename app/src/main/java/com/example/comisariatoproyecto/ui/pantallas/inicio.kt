@@ -18,32 +18,41 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.r_permisos
 
-// Paleta consistente con el login y el menú inferior
-private val Cafe       = Color(0xFF8B5A2B)
+private val Cafe = Color(0xFF8B5A2B)
 private val AzulOscuro = Color(0xFF1A2E4A)
-private val Crema      = Color(0xFFFFE4C4)
-private val FondoGris  = Color(0xFFF5F0EB)
-private val Blanco     = Color.White
+private val Crema = Color(0xFFFFE4C4)
+private val FondoGris = Color(0xFFF5F0EB)
+private val Blanco = Color.White
 private val NegroSuave = Color(0xFF111827)
-private val GrisTexto  = Color(0xFF6B7280)
-private val VerdeOk    = Color(0xFF22C55E)
-
-
+private val GrisTexto = Color(0xFF6B7280)
+private val VerdeOk = Color(0xFF22C55E)
 
 @Composable
 fun PantallaInicio(repo: r_permisos) {
     var empleado by remember { mutableStateOf<Empleado?>(null) }
-
-
+    var cargando by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
+        cargando = true
         empleado = repo.obtenerMiPerfilEmpleado()
+        cargando = false
+    }
+
+    if (cargando) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(FondoGris),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Cafe)
+        }
+        return
     }
 
     Column(
@@ -72,9 +81,6 @@ fun PantallaInicio(repo: r_permisos) {
     }
 }
 
-// ----------------------------------------------------------------------------
-// HEADER
-// ----------------------------------------------------------------------------
 @Composable
 fun HeaderInicio(empleado: Empleado?) {
     Box(
@@ -113,10 +119,8 @@ fun HeaderInicio(empleado: Empleado?) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // TODO: traer nombre del usuario logueado
-            // colección: usuarios, campo: nombre
             Text(
-                text = "Hola, ${empleado?.nombreCompleto}",
+                text = "Hola, ${empleado?.nombreCompleto ?: "Usuario"}",
                 color = Blanco,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
@@ -130,15 +134,8 @@ fun HeaderInicio(empleado: Empleado?) {
     }
 }
 
-// ----------------------------------------------------------------------------
-// TARJETA: LÍNEA DE CRÉDITO
-// ----------------------------------------------------------------------------
 @Composable
-fun TarjetaLineaCredito(
-    empleado: Empleado?
-) {
-
-
+fun TarjetaLineaCredito(empleado: Empleado?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -146,7 +143,6 @@ fun TarjetaLineaCredito(
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -159,11 +155,9 @@ fun TarjetaLineaCredito(
                     color = GrisTexto,
                     letterSpacing = 1.sp
                 )
-                // TODO: disponible = empleado.limiteCredito - credito.saldoPendiente
-                // colección empleados: campo limiteCredito
-                // colección creditos: campo saldoPendiente
+
                 Text(
-                    text = "Disponible: ${empleado?.salario}",
+                    text = "Salario: ${empleado?.salarioFormateado ?: "L. 0.00"}",
                     fontSize = 12.sp,
                     color = VerdeOk,
                     fontWeight = FontWeight.Medium
@@ -172,9 +166,6 @@ fun TarjetaLineaCredito(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // TODO: progreso = credito.totalCredito / empleado.limiteCredito
-            // colección creditos: campo totalCredito
-            // colección empleados: campo limiteCredito
             val progreso = 0.35f
 
             LinearProgressIndicator(
@@ -193,20 +184,23 @@ fun TarjetaLineaCredito(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // TODO: credito.totalCredito (colección: creditos, campo: totalCredito)
-                Text(text = "Utilizado: L. 3,500", fontSize = 12.sp, color = GrisTexto)
-                // TODO: empleado.limiteCredito (colección: empleados, campo: limiteCredito)
-                val disponible = (empleado?.salario ?: 0.0) * 0.25
-                
-                Text(text = "Total disponible: ${disponible}", fontSize = 12.sp, color = NegroSuave, fontWeight = FontWeight.Medium)
+                Text(
+                    text = "Utilizado: L. 3,500",
+                    fontSize = 12.sp,
+                    color = GrisTexto
+                )
+
+                Text(
+                    text = "Total disponible: ${empleado?.salarioFormateado ?: "L. 0.00"}",
+                    fontSize = 12.sp,
+                    color = NegroSuave,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
 }
 
-// ----------------------------------------------------------------------------
-// TARJETA: PRÓXIMO PAGO
-// ----------------------------------------------------------------------------
 @Composable
 fun TarjetaProximoPago() {
     Card(
@@ -216,7 +210,6 @@ fun TarjetaProximoPago() {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -229,8 +222,6 @@ fun TarjetaProximoPago() {
                     color = Blanco.copy(alpha = 0.75f),
                     letterSpacing = 1.sp
                 )
-                // TODO: colección creditos, campo: estado
-                // si estado == "Activo" -> "AL DÍA", sino -> "PENDIENTE"
                 Surface(
                     color = VerdeOk.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(20.dp)
@@ -247,7 +238,6 @@ fun TarjetaProximoPago() {
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // TODO: credito.cuotaMensual (colección: creditos, campo: cuotaMensual)
             Text(
                 text = "L. 850.00",
                 color = Blanco,
@@ -262,15 +252,13 @@ fun TarjetaProximoPago() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // TODO: fecha próximo pago a partir de credito.fechaInicio
-                // colección: creditos, campo: fechaInicio
                 Text(
                     text = "📅  15 May, 2024",
                     color = Blanco.copy(alpha = 0.8f),
                     fontSize = 13.sp
                 )
                 Button(
-                    onClick = { /* TODO: navegar a Mi Crédito */ },
+                    onClick = { },
                     colors = ButtonDefaults.buttonColors(containerColor = Crema),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
@@ -287,9 +275,6 @@ fun TarjetaProximoPago() {
     }
 }
 
-// ----------------------------------------------------------------------------
-// TARJETA: NOTIFICACIÓN DE SOLICITUD
-// ----------------------------------------------------------------------------
 @Composable
 fun TarjetaNotificacion() {
     Card(
@@ -312,10 +297,6 @@ fun TarjetaNotificacion() {
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                // TODO: último crédito del empleado
-                // colección: creditos, campos: estado + productoId
-                // buscar nombre en colección: productos, campo: nombre
-                // texto: "Tu solicitud de ${producto.nombre} fue ${credito.estado}"
                 Text(
                     text = "¡Tu solicitud de Smartphone Galaxy A54 fue APROBADA!",
                     fontSize = 13.sp,
@@ -324,7 +305,7 @@ fun TarjetaNotificacion() {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 TextButton(
-                    onClick = { /* TODO: navegar al detalle en Mi Crédito */ },
+                    onClick = { },
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Text(
@@ -339,9 +320,6 @@ fun TarjetaNotificacion() {
     }
 }
 
-// -----------------------------------------------------------------------------
-// SECCIÓN: PARA TI
-// ----------------------------------------------------------------------------
 @Composable
 fun SeccionParaTi() {
     Row(
@@ -349,8 +327,13 @@ fun SeccionParaTi() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = "Para ti", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NegroSuave)
-        TextButton(onClick = { /* TODO: navegar a Catálogo */ }) {
+        Text(
+            text = "Para ti",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = NegroSuave
+        )
+        TextButton(onClick = { }) {
             Text(text = "Ver todo", color = Cafe, fontSize = 13.sp)
         }
     }
@@ -358,13 +341,12 @@ fun SeccionParaTi() {
     Spacer(modifier = Modifier.height(10.dp))
 
     val productosPlaceholder = listOf(
-        Triple("Laptops",        "L. 12,500", "💻"),
-        Triple("Audífonos Sony", "L. 2,800",  "🎧"),
-        Triple("Tablet Samsung", "L. 8,200",  "📱"),
-        Triple("Silla Gamer",    "L. 4,500",  "🪑"),
+        Triple("Laptops", "L. 12,500", "💻"),
+        Triple("Audífonos Sony", "L. 2,800", "🎧"),
+        Triple("Tablet Samsung", "L. 8,200", "📱"),
+        Triple("Silla Gamer", "L. 4,500", "🪑")
     )
 
-    // Mostrar productos en filas de 2 columnas
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -382,7 +364,6 @@ fun SeccionParaTi() {
                         modifier = Modifier.weight(1f)
                     )
                 }
-                // Si la última fila solo tiene 1 elemento, añadimos un espacio vacío
                 if (fila.size == 1) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
@@ -391,9 +372,6 @@ fun SeccionParaTi() {
     }
 }
 
-//----------------------------------------------------------------------------
-// TARJETA INDIVIDUAL DE PRODUCTO — ajustada para cuadrícula
-// ----------------------------------------------------------------------------
 @Composable
 fun TarjetaProducto(
     nombre: String,
@@ -411,7 +389,7 @@ fun TarjetaProducto(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(130.dp) // Altura ajustada para 2 columnas
+                    .height(130.dp)
                     .background(Crema),
                 contentAlignment = Alignment.Center
             ) {
@@ -419,7 +397,6 @@ fun TarjetaProducto(
             }
 
             Column(modifier = Modifier.padding(10.dp)) {
-                // Categoría
                 Surface(
                     color = Crema.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(20.dp)
@@ -456,7 +433,7 @@ fun TarjetaProducto(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
-                    onClick = { /* TODO: navegar al detalle */ },
+                    onClick = { },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Cafe),
                     shape = RoundedCornerShape(8.dp),
