@@ -46,9 +46,19 @@ import com.example.comisariatoproyecto.ui.pantallas.PantallaInicio
 import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
 import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
+import com.google.firebase.Firebase
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+import com.google.firebase.initialize
+
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        Firebase.initialize(context = this)
+        val firebaseAppCheck = Firebase.appCheck
+        firebaseAppCheck.installAppCheckProviderFactory(
+            PlayIntegrityAppCheckProviderFactory.getInstance()
+        )
         super.onCreate(savedInstanceState)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO) // 🔥
         enableEdgeToEdge()
@@ -187,15 +197,8 @@ fun AppNavigation() {
                 composable("perfil") {
                     PerfilScreen(
                         repo = repoAuth,
-                    onLogout = {
-                            repoAuth.logout()
-                            nav.navigate("login")
-                            {
-                                popUpTo("inicio") { inclusive = true }
-                            }
-
-                        }
                     )
+
                 }
             }
         }

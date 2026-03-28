@@ -86,4 +86,6 @@ dependencies {
     //dependencia de huella
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
 }
