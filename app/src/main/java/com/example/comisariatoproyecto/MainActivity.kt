@@ -42,6 +42,7 @@ import com.example.comisariatoproyecto.ui.pantallas.LoginComisariatoScreen
 import com.example.comisariatoproyecto.ui.pantallas.MenuInferiorComisariato
 import com.example.comisariatoproyecto.ui.pantallas.PantallaCatalogo
 import com.example.comisariatoproyecto.ui.pantallas.PantallaCredito
+import com.example.comisariatoproyecto.ui.pantallas.PantallaDetalleProducto
 import com.example.comisariatoproyecto.ui.pantallas.PantallaInicio
 import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
 import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
@@ -81,8 +82,10 @@ class MainActivity : FragmentActivity() {
 fun AppNavigation() {
     val nav = rememberNavController()
     val repoAuth = remember { r_permisos() }
+    /* No se necesitan por ahora — PantallaCatalogo usa su propio ViewModel
     val repocat = remember { r_Categoria() }
     val repoprod = remember { r_Productos() }
+    */
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -171,18 +174,25 @@ fun AppNavigation() {
                 }
 
                 composable("catalogo") {
-                    ProductosCatalogo (
-                        repoCategoria = repocat,
-                        repoProducto = repoprod ,
-                        onBack = { nav.popBackStack() },
-                        onVerProductos = { categoria ->
-                            // Pasas el id por la ruta
-                            nav.navigate("productos/${categoria.id}/${categoria.nombre}")
-                        },
-                        onVerDetalleProducto = { prod -> nav.navigate("detalle/${prod.id}") }
+                    PantallaCatalogo(
+                        onVerDetalle = { id, nombre ->
+                            nav.navigate("detalle/$id/$nombre")
+                        }
                     )
                 }
 
+                composable("detalle/{productoId}/{productoNombre}") { backStack ->
+                    val productoId = backStack.arguments?.getString("productoId") ?: return@composable
+                    val productoNombre = backStack.arguments?.getString("productoNombre") ?: ""
+
+                    PantallaDetalleProducto(
+                        productoId = productoId,
+                        productoNombre = productoNombre
+                    )
+
+                }
+
+                /* Rutas comentadas — no se usan mientras trabajamos con PantallaCatalogo
                 composable("productos/{categoriaId}/{categoriaNombre}") { backStack ->
                     val categoriaId = backStack.arguments?.getString("categoriaId") ?: return@composable
                     val categoriaNombre = backStack.arguments?.getString("categoriaNombre") ?: ""
@@ -191,13 +201,14 @@ fun AppNavigation() {
                         m_Categoria(id = categoriaId, nombre = categoriaNombre)
                     }
 
-                    ListaProductos (
+                    ListaProductos(
                         categoria = categoria,
                         repo = remember { r_Productos() },
                         onBack = { nav.popBackStack() },
-                        onVerDetalle = { /* opcional: navegar al detalle del producto */ }
+                        onVerDetalle = { }
                     )
                 }
+                */
 
                 composable("credito") {
                     PantallaCredito()
