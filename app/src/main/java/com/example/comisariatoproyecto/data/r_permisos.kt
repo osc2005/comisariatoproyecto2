@@ -190,4 +190,5 @@ class r_permisos {
             }
         }
     }
+
 }

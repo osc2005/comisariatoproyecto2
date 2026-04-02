@@ -123,7 +123,7 @@ fun DetalleProducto(
         bottomBar = {
             if (producto != null) {
                 Column {
-                    HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
+                 HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
 
                     Row(
                         modifier = Modifier

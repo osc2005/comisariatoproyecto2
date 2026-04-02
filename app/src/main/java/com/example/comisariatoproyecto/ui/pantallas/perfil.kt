@@ -31,6 +31,9 @@ import androidx.compose.ui.unit.sp
 import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.Usuario
 import com.example.comisariatoproyecto.data.r_permisos
+import com.example.comisariatoproyecto.ui.theme.NavyPrimary
+import com.example.comisariatoproyecto.ui.theme.SurfaceBase
+import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
 
 private val ColorCafe  = Color(0xFF8B5A2B)
 private val ColorCrema = Color(0xFFFFF8F0)
@@ -68,7 +71,7 @@ fun PerfilScreen(repo: r_permisos) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ColorCrema)
+            .background(SurfaceBase)
     ) {
         when {
             // ── CARGANDO ────────────────────────────────────────────────────
@@ -122,7 +125,7 @@ fun PerfilScreen(repo: r_permisos) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                color = ColorCafe,
+                                color = NavyPrimary,
                                 shape = RoundedCornerShape(
                                     bottomStart = 28.dp,
                                     bottomEnd   = 28.dp
@@ -162,7 +165,7 @@ fun PerfilScreen(repo: r_permisos) {
                                     ?: usuario!!.nombre.ifEmpty { "Sin nombre" },
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = SurfaceWhite
                             )
 
                             Spacer(modifier = Modifier.height(4.dp))
