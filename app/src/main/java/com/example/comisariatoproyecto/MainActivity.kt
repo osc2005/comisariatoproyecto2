@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.NavHost
@@ -56,6 +57,7 @@ import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
 import com.example.comisariatoproyecto.ui.pantallas.ConfirmarReserva
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
+import com.example.comisariatoproyecto.utils.SessionPrefs
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
@@ -95,7 +97,8 @@ fun AppNavigation() {
     val repoprod = remember { r_Productos() }
     val repocreditos = remember { r_Creditos() }
     val repocuotas = remember { r_CuotaCredito() }
-
+    val context = LocalContext.current
+    val sessionPrefs = remember { SessionPrefs(context) }      //
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
 
     var productoSeleccionado by remember { mutableStateOf<m_Productos?>(null) }
@@ -108,16 +111,23 @@ fun AppNavigation() {
 
     LaunchedEffect(Unit) {
         try {
-            val logged = repoAuth.isLogged()
-            if (logged) {
-                // Cargamos el perfil una sola vez aquí para TODA la app
+            val firebaseLogged = repoAuth.isLogged()
+            val hayCredencialesLocales = sessionPrefs.hayUsuarioRegistrado() &&
+                    sessionPrefs.obtenerCorreo().isNotBlank() &&
+                    sessionPrefs.obtenerPassword().isNotBlank()
+
+            // ✅ Solo pasa si AMBAS condiciones se cumplen
+            if (firebaseLogged && hayCredencialesLocales) {
                 val perfil = repoAuth.obtenerMiPerfilCompleto()
                 empleadoCargado = perfil.second
                 startDestination = "inicio"
             } else {
+                // Si Firebase tiene sesión pero no hay credenciales locales → cerrar sesión
+                repoAuth.logout()
                 startDestination = "login"
             }
         } catch (e: Exception) {
+            repoAuth.logout()
             startDestination = "login"
         }
     }
