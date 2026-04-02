@@ -171,39 +171,12 @@ fun PerfilScreen(repo: r_permisos) {
                             Spacer(modifier = Modifier.height(4.dp))
 
                             // Rol desde usuarios
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = Color.White.copy(alpha = 0.15f)
-                            ) {
-                                Text(
-                                    text = usuario!!.rolNombre.ifEmpty { "Sin rol" },
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(
-                                        horizontal = 12.dp, vertical = 4.dp
-                                    )
-                                )
-                            }
+
 
                             Spacer(modifier = Modifier.height(6.dp))
 
                             // Estado desde empleados (con fallback a usuarios)
-                            val activo = empleado?.estaActivo ?: usuario!!.estaActivo
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (activo) VerdeOk.copy(alpha = 0.2f)
-                                else Color.Red.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    text = if (activo) "● Activo" else "● Inactivo",
-                                    color = if (activo) Color(0xFF86EFAC)
-                                    else Color(0xFFFCA5A5),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(
-                                        horizontal = 12.dp, vertical = 4.dp
-                                    )
-                                )
-                            }
+
                         }
                     }
 
@@ -245,11 +218,6 @@ fun PerfilScreen(repo: r_permisos) {
                         TextoSeccion("Datos laborales")
 
                         TarjetaDato(
-                            icono    = Icons.Outlined.Business,
-                            etiqueta = "Departamento",
-                            valor    = empleado?.departamentoNombre ?: "—"
-                        )
-                        TarjetaDato(
                             icono    = Icons.Outlined.AttachMoney,
                             etiqueta = "Salario",
                             valor    = empleado?.salarioFormateado ?: "—"
@@ -270,11 +238,7 @@ fun PerfilScreen(repo: r_permisos) {
                             etiqueta = "Correo personal",
                             valor    = usuario!!.correoPersonal.ifEmpty { "—" }
                         )
-                        TarjetaDato(
-                            icono    = Icons.Outlined.AdminPanelSettings,
-                            etiqueta = "Rol",
-                            valor    = usuario!!.rolNombre.ifEmpty { "—" }
-                        )
+
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -292,7 +256,7 @@ private fun TextoSeccion(texto: String) {
         text = texto,
         fontSize = 13.sp,
         fontWeight = FontWeight.Bold,
-        color = ColorCafe,
+        color = NavyPrimary,
         modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
     )
 }
@@ -318,7 +282,7 @@ private fun TarjetaDato(
             Icon(
                 imageVector = icono,
                 contentDescription = null,
-                tint = ColorCafe,
+                tint = NavyPrimary,
                 modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.width(14.dp))
