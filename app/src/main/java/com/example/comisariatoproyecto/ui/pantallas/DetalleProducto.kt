@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.comisariatoproyecto.data.Empleado
+import com.example.comisariatoproyecto.data.m_Creditos
 import com.example.comisariatoproyecto.data.m_CuotaCredito
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Creditos
@@ -45,8 +45,10 @@ fun DetalleProducto(
     repoCuotas: r_CuotaCredito,
     repoCreditos: r_Creditos,
     empleado: Empleado?,
+    reservaPendiente: m_Creditos?,
     onBack: () -> Unit,
-    onReservar: (m_Productos, Int?, Int) -> Unit
+    onReservar: (m_Productos, Int?, Int) -> Unit,
+    onCancelarReserva: (String) -> Unit
 ) {
     val cuotas by repoCuotas.obtenerCuotas().collectAsState(initial = emptyList())
 
@@ -64,7 +66,7 @@ fun DetalleProducto(
             try {
                 porcentajeCfg = repoCreditos.obtenerConfiguracionCredito()
                 utilizadoActual = repoCreditos.obtenerCreditoUtilizadoReal(empleado.codigoEmpleado)
-            } catch (e: Exception) { /* Error silencioso */ }
+            } catch (e: Exception) {  }
         }
         cargandoValidacion = false
     }
@@ -179,14 +181,24 @@ fun DetalleProducto(
 
                         Button(
                             onClick = {
-                                onReservar(
-                                    producto!!,
-                                    if (modoCredito) plazoSeleccionado?.id?.toInt() else null,
-                                    cantidad
-                                )
+                                if (reservaPendiente != null) {
+                                    onCancelarReserva(reservaPendiente.id)
+                                } else {
+                                    onReservar(
+                                        producto!!,
+                                        if (modoCredito) plazoSeleccionado?.id?.toInt() else null,
+                                        cantidad
+                                    )
+                                }
                             },
-                            // Se deshabilita si: falta elegir plazo, excede el límite o está cargando
-                            enabled = !estaAgotado && !requiereSeleccionarPlazo && !excedeLimite && !cargandoValidacion,
+                            enabled = when {
+                                estaAgotado && reservaPendiente == null -> false
+                                reservaPendiente != null -> true
+                                requiereSeleccionarPlazo -> false
+                                excedeLimite -> false
+                                cargandoValidacion -> false
+                                else -> true
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(40.dp),
@@ -194,8 +206,9 @@ fun DetalleProducto(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = when {
                                     estaAgotado -> Color.Gray
+                                    reservaPendiente != null -> Color.Red
                                     excedeLimite -> Color.Gray
-                                    requiereSeleccionarPlazo -> NavyPrimary.copy(alpha = 0.6f) // Color más suave si falta elegir
+                                    requiereSeleccionarPlazo -> NavyPrimary.copy(alpha = 0.6f)
                                     else -> NavyPrimary
                                 },
                                 disabledContainerColor = if (excedeLimite) Color.Gray.copy(alpha = 0.5f) else NavyPrimary.copy(alpha = 0.3f)
@@ -205,7 +218,8 @@ fun DetalleProducto(
                                 text = when {
                                     estaAgotado -> "Agotado"
                                     excedeLimite -> "Límite insuficiente"
-                                    requiereSeleccionarPlazo -> "Seleccione un plazo" // Indica qué debe hacer el usuario
+                                    reservaPendiente != null -> "Cancelar reserva"
+                                    requiereSeleccionarPlazo -> "Seleccione un plazo"
                                     else -> "Reservar producto"
                                 },
                                 fontWeight = FontWeight.SemiBold,

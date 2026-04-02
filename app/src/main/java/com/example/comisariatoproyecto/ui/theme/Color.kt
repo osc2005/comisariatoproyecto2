@@ -12,3 +12,6 @@ val SurfaceWhite = Color(0xFFFFFFFF)       // Fondo de las cards/menús
 val TextSecondary = Color(0xFF555F70)      // Texto inactivo / subtítulos
 val GreenPrimary   = Color(0xFF2D7D62)
 val GreenContainer = Color(0xFFDFF0EB)
+
+
+val RedCancel= Color(0xFFAB2929)

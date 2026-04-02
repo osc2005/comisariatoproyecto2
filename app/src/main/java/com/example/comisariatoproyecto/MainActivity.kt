@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,6 +38,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.m_Categoria
+import com.example.comisariatoproyecto.data.m_Creditos
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Categoria
 import com.example.comisariatoproyecto.data.r_Creditos
@@ -62,6 +64,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.initialize
+import kotlinx.coroutines.launch
 
 
 class MainActivity : FragmentActivity() {
@@ -109,6 +112,11 @@ fun AppNavigation() {
 
     var empleadoCargado by remember { mutableStateOf<Empleado?>(null) }
 
+    var reservasEmpleado by remember { mutableStateOf<List<m_Creditos>>(emptyList()) }
+
+    val scope = rememberCoroutineScope()
+
+
     LaunchedEffect(Unit) {
         try {
             val firebaseLogged = repoAuth.isLogged()
@@ -120,6 +128,11 @@ fun AppNavigation() {
             if (firebaseLogged && hayCredencialesLocales) {
                 val perfil = repoAuth.obtenerMiPerfilCompleto()
                 empleadoCargado = perfil.second
+
+                empleadoCargado?.let { emp ->
+                    reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                }
+
                 startDestination = "inicio"
             } else {
                 // Si Firebase tiene sesión pero no hay credenciales locales → cerrar sesión
@@ -261,12 +274,24 @@ fun AppNavigation() {
                 composable("detalleProducto") {
                     productoSeleccionado?.let { producto ->
 
+                        val reservaPendiente = reservasEmpleado.firstOrNull {
+                            it.productoId == producto.id && it.estado == "Pendiente"
+                        }
                         DetalleProducto(
                             producto = producto,
                             repoCuotas = repocuotas,
                             repoCreditos = repocreditos,
+                            reservaPendiente = reservaPendiente,
                             empleado = empleadoCargado,
                             onBack = { nav.popBackStack() },
+                            onCancelarReserva = { reservaId ->
+                                scope.launch {
+                                    repocreditos.cancelarReserva(reservaId)
+                                    reservasEmpleado = reservasEmpleado.map {
+                                        if (it.id == reservaId) it.copy(estado = "Cancelado") else it
+                                    }
+                                }
+                            },
                             onReservar = { prod, plazo, cant ->
                                 productoSeleccionado = prod
                                 plazoSeleccionadoReserva = plazo
@@ -289,13 +314,16 @@ fun AppNavigation() {
                                 empleado = empleadoCargado!!,
                                 onBack = { nav.popBackStack() },
                                 onConfirmar = {
-                                    nav.navigate("inicio") {
-                                        popUpTo("inicio") { inclusive = true }
+                                    scope.launch {
+                                        empleadoCargado?.let { emp ->
+                                            reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                                        }
                                     }
+                                    nav.popBackStack()
+
                                 }
                             )
                         } else {
-                            // Mientras Firebase responde, mostramos carga
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 CircularProgressIndicator(color = NavyPrimary)
                             }
