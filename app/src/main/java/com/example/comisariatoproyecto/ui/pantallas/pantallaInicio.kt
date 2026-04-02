@@ -1,13 +1,11 @@
 package com.example.comisariatoproyecto.ui.pantallas
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Home
@@ -17,17 +15,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val cafeActivo = Color(0xFF8B5A2B)
-private val GrisInactivo = Color(0xFF6B7280)
-private val FondoMenu = Color(0xFFF7F7F7)
-private val RojoLinea = Color(0xFF8B0000)
-
-val RusticAccent = Color(0xFF8B5A2B)
+// Importación de tu paleta oficial
+import com.example.comisariatoproyecto.ui.theme.NavyPrimary
+import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
+import com.example.comisariatoproyecto.ui.theme.TextSecondary
 
 @Composable
 fun MenuInferiorComisariato(
@@ -37,30 +33,25 @@ fun MenuInferiorComisariato(
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
-
-        // 🔴 Línea roja
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-
-                .background(RojoLinea)
+        // Línea divisoria sutil usando Navy al 10% de opacidad (reemplaza la línea roja)
+        HorizontalDivider(
+            color = NavyPrimary.copy(alpha = 0.1f),
+            thickness = 0.5.dp
         )
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = FondoMenu,
-            shadowElevation = 8.dp
+            color = SurfaceWhite, // Usamos tu blanco de superficie
+            shadowElevation = 16.dp // Elevación un poco más pronunciada para el estilo moderno
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 8.dp), // Padding más equilibrado
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
-
             ) {
-
                 ItemMenu("Inicio", itemSeleccionado == "Inicio", onItemClick) {
                     Icon(Icons.Outlined.Home, contentDescription = null)
                 }
@@ -78,7 +69,6 @@ fun MenuInferiorComisariato(
                 }
             }
         }
-
     }
 }
 
@@ -88,37 +78,34 @@ fun ItemMenu(
     seleccionado: Boolean,
     onItemClick: (String) -> Unit,
     icono: @Composable () -> Unit
-
 ) {
-    val color = if (seleccionado) cafeActivo else GrisInactivo
+    // El color activo ahora es tu NavyPrimary, el inactivo es TextSecondary
+    val color = if (seleccionado) NavyPrimary else TextSecondary
 
     Column(
         modifier = Modifier
-            .clickable { onItemClick(titulo) } // 🔥 CORREGIDO
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .clip(RoundedCornerShape(12.dp)) // Añadimos un radio de clic más limpio
+            .clickable { onItemClick(titulo) }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         CompositionLocalProvider(LocalContentColor provides color) {
             Box(
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 icono()
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = titulo,
             color = color,
-            fontSize = 13.sp,
-            fontWeight = if (seleccionado) FontWeight.Medium else FontWeight.Normal
+            fontSize = 11.sp, // Tamaño ajustado para estilo profesional
+            fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal
         )
     }
-
-
 }
-
 

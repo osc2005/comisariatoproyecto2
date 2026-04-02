@@ -21,6 +21,27 @@ import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Productos
 
 
+
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+
+import com.example.comisariatoproyecto.ui.theme.NavyPrimary
+import com.example.comisariatoproyecto.ui.theme.SurfaceBase
+import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
+import com.example.comisariatoproyecto.ui.theme.TextSecondary
+
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaProductos(
@@ -33,11 +54,18 @@ fun ListaProductos(
         .obtenerProductosPorCategoria(categoria.id)
         .collectAsState(initial = null)
 
+    var orden by remember { mutableStateOf("ninguno") }
     var buscar by remember { mutableStateOf("") }
 
     Scaffold(
+        containerColor = SurfaceBase,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = SurfaceWhite,
+                    titleContentColor = NavyPrimary,
+                    navigationIconContentColor = NavyPrimary
+                ),
                 title = {
                     Column {
                         Text(
@@ -48,7 +76,7 @@ fun ListaProductos(
                         Text(
                             text = "Productos",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = TextSecondary
                         )
                     }
                 },
@@ -67,16 +95,51 @@ fun ListaProductos(
                 onValueChange = { buscar = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .background(SurfaceWhite, RoundedCornerShape(12.dp)),
                 placeholder = { Text("Buscar producto...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = SurfaceWhite,
+                    unfocusedContainerColor = SurfaceWhite,
+                    disabledContainerColor = SurfaceWhite,
+                    focusedBorderColor = NavyPrimary,
+                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.3f),
+                )
             )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = orden == "menor_mayor",
+                    onClick = { orden = if (orden == "menor_mayor") "ninguno" else "menor_mayor" },
+                    label = { Text("Precio más bajo", fontSize = 11.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = NavyPrimary,
+                        selectedLabelColor = Color.White
+                    )
+                )
+
+                FilterChip(
+                    selected = orden == "mayor_menor",
+                    onClick = { orden = if (orden == "mayor_menor") "ninguno" else "mayor_menor" },
+                    label = { Text("Precio más alto", fontSize = 11.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = NavyPrimary,
+                        selectedLabelColor = Color.White
+                    )
+                )
+            }
 
             when {
                 productos == null -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = NavyPrimary)
                     }
                 }
 
@@ -103,6 +166,12 @@ fun ListaProductos(
                 else -> {
                     val filtrados = productos!!.filter {
                         it.nombre.contains(buscar, ignoreCase = true)
+                    }.let { lista ->
+                        when (orden) {
+                            "menor_mayor" -> lista.sortedBy { it.precioContado }
+                            "mayor_menor" -> lista.sortedByDescending { it.precioContado }
+                            else -> lista
+                        }
                     }
 
                     if (filtrados.isEmpty()) {
@@ -114,20 +183,18 @@ fun ListaProductos(
                             )
                         }
                     } else {
-                        // Resumen de cantidad
                         Text(
                             text = "${filtrados.size} producto(s)",
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.Gray,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
 
-                        // Grid dinámico de 2 columnas (igual que el Inicio)
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
-                            contentPadding = PaddingValues(16.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(filtrados, key = { it.id }) { producto ->
@@ -144,50 +211,93 @@ fun ListaProductos(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Tarjeta individual de producto — misma estructura que DashboardCard en Inicio
-// ---------------------------------------------------------------------------
 @Composable
 fun ProductoCard(
     producto: m_Productos,
     onClick: () -> Unit
 ) {
-    ElevatedCard(
+    var pressed by remember { mutableStateOf(false) }
+
+    val estaAgotado = producto.stock <= producto.stockMinimo
+
+    Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+            .scale(if (pressed) 0.96f else 1f),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        interactionSource = remember { MutableInteractionSource() }.also { source ->
+            LaunchedEffect(source) {
+                source.interactions.collect { interaction ->
+                    pressed = interaction is PressInteraction.Press
+                }
+            }
+        }
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxWidth()
+                .padding(12.dp) // Padding interno equilibrado
         ) {
-            Icon(
-                imageVector = Icons.Default.ShoppingCart,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(36.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceBase),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = producto.imagenUrl,
+                    contentDescription = producto.nombre,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (estaAgotado) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center
+
+                    ) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                "AGOTADO",
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(Modifier.height(8.dp))
+
             Text(
-                text = producto.nombre,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                maxLines = 2
+                text = producto.nombre.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Normal,
+                color = TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                letterSpacing = 0.5.sp,
+                lineHeight = 16.sp
             )
-            // Si tu modelo tiene precio, descomenta esto:
-            // Spacer(Modifier.height(4.dp))
-            // Text(
-            //     text = "L. ${producto.precio}",
-            //     style = MaterialTheme.typography.labelMedium,
-            //     color = MaterialTheme.colorScheme.primary,
-            //     fontWeight = FontWeight.Bold
-            // )
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = "L. " + String.format(java.util.Locale.US, "%,.2f", producto.precioContado),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = NavyPrimary
+            )
         }
     }
 }

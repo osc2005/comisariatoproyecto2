@@ -88,4 +88,9 @@ dependencies {
 
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
+
+
+    // carga las imagenes x url
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }

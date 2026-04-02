@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,19 +34,28 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.m_Categoria
+import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Categoria
+import com.example.comisariatoproyecto.data.r_Creditos
+import com.example.comisariatoproyecto.data.r_CuotaCredito
 import com.example.comisariatoproyecto.data.r_Productos
 import com.example.comisariatoproyecto.data.r_permisos
+
+import com.example.comisariatoproyecto.ui.pantallas.DetalleProducto
 import com.example.comisariatoproyecto.ui.pantallas.ListaProductos
 import com.example.comisariatoproyecto.ui.pantallas.LoginComisariatoScreen
 import com.example.comisariatoproyecto.ui.pantallas.MenuInferiorComisariato
-import com.example.comisariatoproyecto.ui.pantallas.PantallaCatalogo
+
 import com.example.comisariatoproyecto.ui.pantallas.PantallaCredito
 import com.example.comisariatoproyecto.ui.pantallas.PantallaInicio
 import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
 import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
+
+import com.example.comisariatoproyecto.ui.pantallas.ConfirmarReserva
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
+import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
@@ -83,12 +93,30 @@ fun AppNavigation() {
     val repoAuth = remember { r_permisos() }
     val repocat = remember { r_Categoria() }
     val repoprod = remember { r_Productos() }
+    val repocreditos = remember { r_Creditos() }
+    val repocuotas = remember { r_CuotaCredito() }
+
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
+
+    var productoSeleccionado by remember { mutableStateOf<m_Productos?>(null) }
+
+
+    var plazoSeleccionadoReserva by remember { mutableStateOf<Int?>(null) }
+    var cantidadSeleccionadaReserva by remember { mutableIntStateOf(1) }
+
+    var empleadoCargado by remember { mutableStateOf<Empleado?>(null) }
 
     LaunchedEffect(Unit) {
         try {
             val logged = repoAuth.isLogged()
-            startDestination = if (logged) "inicio" else "login"
+            if (logged) {
+                // Cargamos el perfil una sola vez aquí para TODA la app
+                val perfil = repoAuth.obtenerMiPerfilCompleto()
+                empleadoCargado = perfil.second
+                startDestination = "inicio"
+            } else {
+                startDestination = "login"
+            }
         } catch (e: Exception) {
             startDestination = "login"
         }
@@ -162,6 +190,8 @@ fun AppNavigation() {
                 composable("inicio") {
                     PantallaInicio(
                         repo = repoAuth,
+                        repoCreditos = repocreditos,
+
                         onLogout = {
                             nav.navigate("login") {
                                 popUpTo("inicio") { inclusive = true }
@@ -171,15 +201,18 @@ fun AppNavigation() {
                 }
 
                 composable("catalogo") {
-                    ProductosCatalogo (
+                    ProductosCatalogo(
                         repoCategoria = repocat,
-                        repoProducto = repoprod ,
+                        repoProducto = repoprod,
                         onBack = { nav.popBackStack() },
                         onVerProductos = { categoria ->
-                            // Pasas el id por la ruta
                             nav.navigate("productos/${categoria.id}/${categoria.nombre}")
                         },
-                        onVerDetalleProducto = { prod -> nav.navigate("detalle/${prod.id}") }
+                        onVerDetalleProducto = { prod ->
+                            // 2. Guardamos el producto y navegamos
+                            productoSeleccionado = prod
+                            nav.navigate("detalleProducto")
+                        }
                     )
                 }
 
@@ -193,11 +226,16 @@ fun AppNavigation() {
 
                     ListaProductos (
                         categoria = categoria,
-                        repo = remember { r_Productos() },
+                        repo = repoprod,
                         onBack = { nav.popBackStack() },
-                        onVerDetalle = { /* opcional: navegar al detalle del producto */ }
+                        onVerDetalle = { producto ->
+                            productoSeleccionado = producto
+                            nav.navigate("detalleProducto")
+                        }
                     )
                 }
+
+
 
                 composable("credito") {
                     PantallaCredito()
@@ -209,10 +247,59 @@ fun AppNavigation() {
                     )
 
                 }
+
+                composable("detalleProducto") {
+                    productoSeleccionado?.let { producto ->
+
+                        DetalleProducto(
+                            producto = producto,
+                            repoCuotas = repocuotas,
+                            repoCreditos = repocreditos,
+                            empleado = empleadoCargado,
+                            onBack = { nav.popBackStack() },
+                            onReservar = { prod, plazo, cant ->
+                                productoSeleccionado = prod
+                                plazoSeleccionadoReserva = plazo
+                                cantidadSeleccionadaReserva = cant
+                                nav.navigate("confirmarReserva")
+                            }
+                        )
+                    }
+                }
+
+                composable("confirmarReserva") {
+
+                    productoSeleccionado?.let { producto ->
+                        if (empleadoCargado != null) {
+                            ConfirmarReserva(
+                                producto = producto,
+                                repoCreditos = repocreditos,
+                                plazoMeses = plazoSeleccionadoReserva,
+                                cantidad = cantidadSeleccionadaReserva,
+                                empleado = empleadoCargado!!,
+                                onBack = { nav.popBackStack() },
+                                onConfirmar = {
+                                    nav.navigate("inicio") {
+                                        popUpTo("inicio") { inclusive = true }
+                                    }
+                                }
+                            )
+                        } else {
+                            // Mientras Firebase responde, mostramos carga
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = NavyPrimary)
+                            }
+                        }
+                    }
+                }
+
+
+
+                }
             }
         }
     }
-}
+
 
 
 

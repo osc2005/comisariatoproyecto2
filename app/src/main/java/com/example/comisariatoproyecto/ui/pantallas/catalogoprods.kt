@@ -1,6 +1,10 @@
 package com.example.comisariatoproyecto.ui.pantallas
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -11,12 +15,16 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.comisariatoproyecto.data.m_Categoria
@@ -24,13 +32,11 @@ import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Categoria
 import com.example.comisariatoproyecto.data.r_Productos
 
-// ── Paleta consistente con PantallaInicio ───────────────────────────────────
-private val Cafe      = Color(0xFF8B5A2B)
-private val Crema     = Color(0xFFFFE4C4)
-private val FondoGris = Color(0xFFF5F0EB)
-private val Blanco    = Color.White
-private val NegroSuave = Color(0xFF111827)
-private val GrisTexto  = Color(0xFF6B7280)
+// Importación de tu paleta oficial definida en Color.kt
+import com.example.comisariatoproyecto.ui.theme.NavyPrimary
+import com.example.comisariatoproyecto.ui.theme.SurfaceBase
+import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
+import com.example.comisariatoproyecto.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +45,7 @@ fun ProductosCatalogo(
     repoProducto: r_Productos,
     onBack: () -> Unit,
     onVerProductos: (m_Categoria) -> Unit,
-    onVerDetalleProducto: (m_Productos) -> Unit          // ← sin cambios
+    onVerDetalleProducto: (m_Productos) -> Unit
 ) {
     val categorias        by repoCategoria.obtenerCategorias().collectAsState(initial = null)
     val todosLosProductos by repoProducto.obtenerProductos().collectAsState(initial = emptyList())
@@ -47,11 +53,20 @@ fun ProductosCatalogo(
     var textoBusqueda      by remember { mutableStateOf("") }
     var expandirSugerencias by remember { mutableStateOf(false) }
 
+//    val sugerencias = remember(textoBusqueda, todosLosProductos) {
+//        if (textoBusqueda.isBlank()) emptyList()
+//        else todosLosProductos.filter {
+//            it.nombre.contains(textoBusqueda, ignoreCase = true) ||
+//                    it.descripcion.contains(textoBusqueda, ignoreCase = true)
+//        }.take(8)
+//    }
+
     val sugerencias = remember(textoBusqueda, todosLosProductos) {
         if (textoBusqueda.isBlank()) emptyList()
         else todosLosProductos.filter {
-            it.nombre.contains(textoBusqueda, ignoreCase = true) ||
-                    it.descripcion.contains(textoBusqueda, ignoreCase = true)
+            val tieneStock = it.stock > it.stockMinimo // Filtra por stock disponible
+            tieneStock && (it.nombre.contains(textoBusqueda, ignoreCase = true) ||
+                    it.descripcion.contains(textoBusqueda, ignoreCase = true))
         }.take(8)
     }
 
@@ -59,27 +74,27 @@ fun ProductosCatalogo(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoGris)
+            .background(SurfaceBase)
     ) {
 
         // ── HEADER (igual al de PantallaInicio) ────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Cafe)
+                .background(NavyPrimary)
                 .padding(horizontal = 20.dp, vertical = 28.dp)
         ) {
             Column {
                 Text(
                     text = "Catálogo",
-                    color = Blanco,
+                    color = SurfaceWhite,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Explora nuestros productos y categorías",
-                    color = Blanco.copy(alpha = 0.85f),
+                    color = SurfaceWhite.copy(alpha = 0.85f),
                     fontSize = 13.sp
                 )
             }
@@ -110,7 +125,7 @@ fun ProductosCatalogo(
                         .clip(RoundedCornerShape(12.dp)),
                     placeholder = { Text("Buscar un producto específico...") },
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = Cafe)
+                        Icon(Icons.Default.Search, contentDescription = null, tint = NavyPrimary)
                     },
                     trailingIcon = {
                         if (textoBusqueda.isNotEmpty()) {
@@ -118,16 +133,16 @@ fun ProductosCatalogo(
                                 textoBusqueda = ""
                                 expandirSugerencias = false
                             }) {
-                                Icon(Icons.Default.Close, contentDescription = "Limpiar", tint = GrisTexto)
+                                Icon(Icons.Default.Close, contentDescription = "Limpiar", tint = TextSecondary)
                             }
                         }
                     },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Cafe,
-                        unfocusedBorderColor = Color(0xFFD1C4B8),
-                        focusedContainerColor = Blanco,
-                        unfocusedContainerColor = Blanco
+                        focusedBorderColor = NavyPrimary,
+                        unfocusedBorderColor = NavyPrimary.copy(alpha = 0.2f),
+                        focusedContainerColor = SurfaceWhite,
+                        unfocusedContainerColor = SurfaceWhite
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -136,7 +151,8 @@ fun ProductosCatalogo(
                 if (sugerencias.isNotEmpty()) {
                     ExposedDropdownMenu(
                         expanded = expandirSugerencias,
-                        onDismissRequest = { expandirSugerencias = false }
+                        onDismissRequest = { expandirSugerencias = false },
+                        modifier = Modifier.background(SurfaceWhite)
                     ) {
                         sugerencias.forEach { producto ->
                             DropdownMenuItem(
@@ -145,19 +161,19 @@ fun ProductosCatalogo(
                                         Text(
                                             text = producto.nombre,
                                             fontWeight = FontWeight.Bold,
-                                            color = NegroSuave
+                                            color = NavyPrimary
                                         )
                                         Text(
                                             text = "${producto.categoriaNombre}  •  L. ${producto.precioContado}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = GrisTexto
+                                            color = TextSecondary
                                         )
                                     }
                                 },
                                 onClick = {
                                     textoBusqueda = producto.nombre
                                     expandirSugerencias = false
-                                    onVerDetalleProducto(producto)   // ← sin cambios
+                                    onVerDetalleProducto(producto)
                                 }
                             )
                         }
@@ -172,14 +188,14 @@ fun ProductosCatalogo(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFD1C4B8))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = NavyPrimary.copy(alpha = 0.1f))
                 Text(
                     text = "  Categorías  ",
                     style = MaterialTheme.typography.labelSmall,
-                    color = GrisTexto,
+                    color = TextSecondary,
                     fontWeight = FontWeight.SemiBold
                 )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFD1C4B8))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = NavyPrimary.copy(alpha = 0.1f))
             }
 
             Spacer(Modifier.height(14.dp))
@@ -188,7 +204,7 @@ fun ProductosCatalogo(
             when {
                 categorias == null -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Cafe)
+                        CircularProgressIndicator(color = NavyPrimary)
                     }
                 }
 
@@ -197,7 +213,7 @@ fun ProductosCatalogo(
                         Text(
                             "No hay categorías registradas.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = GrisTexto
+                            color = TextSecondary
                         )
                     }
                 }
@@ -213,7 +229,7 @@ fun ProductosCatalogo(
                         items(categorias!!, key = { it.id }) { categoria ->
                             TarjetaCategoria(
                                 categoria = categoria,
-                                onClick = { onVerProductos(categoria) }   // ← sin cambios
+                                onClick = { onVerProductos(categoria) }
                             )
                         }
                     }
@@ -229,44 +245,47 @@ fun TarjetaCategoria(
     categoria: m_Categoria,
     onClick: () -> Unit
 ) {
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        label = "scale"
+    )
+
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp),
+            .height(96.dp)
+            .scale(scale),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Blanco),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Franja de color en la parte superior (igual que el box de emoji en TarjetaProducto)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .background(Cafe)
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = categoria.nombre,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = NegroSuave,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2
-                )
-                Spacer(Modifier.height(6.dp))
+        colors = CardDefaults.cardColors(
+            containerColor = SurfaceWhite,
+            disabledContainerColor = SurfaceWhite
+        ),
+        border = BorderStroke(1.dp, NavyPrimary.copy(alpha = 0.1f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        interactionSource = remember { MutableInteractionSource() }.also { source ->
+            LaunchedEffect(source) {
+                source.interactions.collect { interaction ->
+                    pressed = interaction is PressInteraction.Press
+                }
             }
+        }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = categoria.nombre,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = NavyPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

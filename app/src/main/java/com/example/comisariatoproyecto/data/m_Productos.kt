@@ -1,5 +1,7 @@
 package com.example.comisariatoproyecto.data
 
+
+
 data class m_Productos(
     val id: String = "",
     val categoriaId: String = "",
@@ -11,4 +13,6 @@ data class m_Productos(
     val precioContado: Double = 0.0,
     val precioCredito: Double = 0.0,
     val stock: Int = 0,
+    val stockMinimo: Int = 0
 )
+

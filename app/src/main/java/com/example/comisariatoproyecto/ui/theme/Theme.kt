@@ -9,18 +9,19 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+//private val DarkColorScheme = darkColorScheme(
+//    primary = Purple80,
+//    secondary = PurpleGrey80,
+//    tertiary = Pink80
+//)
+//
+//private val LightColorScheme = lightColorScheme(
+//    primary = Purple40,
+//    secondary = PurpleGrey40,
+//    tertiary = Pink40
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -31,6 +32,33 @@ private val LightColorScheme = lightColorScheme(
     onBackground = Color(0xFF1C1B1F),
     onSurface = Color(0xFF1C1B1F),
     */
+
+private val DarkColorScheme = darkColorScheme(
+    primary = SurfaceWhite,        // En modo oscuro el texto/iconos resaltan en blanco
+    secondary = TextSecondary,
+    tertiary = NavyContainer,
+    background = NavyPrimary,      // Fondo azul profundo
+    surface = NavyContainer,       // Cards azul marino
+    onPrimary = NavyPrimary,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White
+)
+
+// Configuración para el tema claro (Tu paleta oficial)
+private val LightColorScheme = lightColorScheme(
+    primary = NavyPrimary,         // El azul de confianza
+    onPrimary = Color.White,       // Texto sobre azul
+    primaryContainer = NavyContainer,
+    onPrimaryContainer = Color.White,
+    secondary = TextSecondary,     // Subtítulos
+    onSecondary = Color.White,
+    background = SurfaceBase,      // Fondo gris azulado claro (8px grid)
+    onBackground = NavyPrimary,    // Texto sobre fondo general
+    surface = SurfaceWhite,        // Fondo de Cards y menús
+    onSurface = NavyPrimary,       // Texto sobre Cards
+    onSurfaceVariant = TextSecondary // Texto descriptivo
 )
 
 @Composable
