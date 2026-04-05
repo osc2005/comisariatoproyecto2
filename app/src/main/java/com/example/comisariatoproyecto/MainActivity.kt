@@ -38,6 +38,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.m_Categoria
+import com.example.comisariatoproyecto.data.m_CreditoDetalle
 import com.example.comisariatoproyecto.data.m_Creditos
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Categoria
@@ -45,18 +46,16 @@ import com.example.comisariatoproyecto.data.r_Creditos
 import com.example.comisariatoproyecto.data.r_CuotaCredito
 import com.example.comisariatoproyecto.data.r_Productos
 import com.example.comisariatoproyecto.data.r_permisos
-
+import com.example.comisariatoproyecto.ui.pantallas.ConfirmarReserva
 import com.example.comisariatoproyecto.ui.pantallas.DetalleProducto
 import com.example.comisariatoproyecto.ui.pantallas.ListaProductos
 import com.example.comisariatoproyecto.ui.pantallas.LoginComisariatoScreen
 import com.example.comisariatoproyecto.ui.pantallas.MenuInferiorComisariato
-
 import com.example.comisariatoproyecto.ui.pantallas.PantallaCredito
+import com.example.comisariatoproyecto.ui.pantallas.PantallaDetalleCredito
 import com.example.comisariatoproyecto.ui.pantallas.PantallaInicio
 import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
 import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
-
-import com.example.comisariatoproyecto.ui.pantallas.ConfirmarReserva
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.utils.SessionPrefs
@@ -66,7 +65,6 @@ import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderF
 import com.google.firebase.initialize
 import kotlinx.coroutines.launch
 
-
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         Firebase.initialize(context = this)
@@ -75,7 +73,7 @@ class MainActivity : FragmentActivity() {
             PlayIntegrityAppCheckProviderFactory.getInstance()
         )
         super.onCreate(savedInstanceState)
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO) // 🔥
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         enableEdgeToEdge()
 
         setContent {
@@ -83,7 +81,6 @@ class MainActivity : FragmentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-
                 ) {
                     AppNavigation()
                 }
@@ -94,39 +91,35 @@ class MainActivity : FragmentActivity() {
 
 @Composable
 fun AppNavigation() {
-    val nav = rememberNavController()
-    val repoAuth = remember { r_permisos() }
-    val repocat = remember { r_Categoria() }
-    val repoprod = remember { r_Productos() }
+    val nav          = rememberNavController()
+    val repoAuth     = remember { r_permisos() }
+    val repocat      = remember { r_Categoria() }
+    val repoprod     = remember { r_Productos() }
     val repocreditos = remember { r_Creditos() }
-    val repocuotas = remember { r_CuotaCredito() }
-    val context = LocalContext.current
-    val sessionPrefs = remember { SessionPrefs(context) }      //
+    val repocuotas   = remember { r_CuotaCredito() }
+    val context      = LocalContext.current
+    val sessionPrefs = remember { SessionPrefs(context) }
+
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
 
-    var productoSeleccionado by remember { mutableStateOf<m_Productos?>(null) }
-
-
-    var plazoSeleccionadoReserva by remember { mutableStateOf<Int?>(null) }
+    var productoSeleccionado       by remember { mutableStateOf<m_Productos?>(null) }
+    var creditoSeleccionado        by remember { mutableStateOf<m_CreditoDetalle?>(null) } // ← NUEVO
+    var plazoSeleccionadoReserva   by remember { mutableStateOf<Int?>(null) }
     var cantidadSeleccionadaReserva by remember { mutableIntStateOf(1) }
-
-    var empleadoCargado by remember { mutableStateOf<Empleado?>(null) }
-
-    var reservasEmpleado by remember { mutableStateOf<List<m_Creditos>>(emptyList()) }
+    var empleadoCargado            by remember { mutableStateOf<Empleado?>(null) }
+    var reservasEmpleado           by remember { mutableStateOf<List<m_Creditos>>(emptyList()) }
 
     val scope = rememberCoroutineScope()
 
-
     LaunchedEffect(Unit) {
         try {
-            val firebaseLogged = repoAuth.isLogged()
+            val firebaseLogged         = repoAuth.isLogged()
             val hayCredencialesLocales = sessionPrefs.hayUsuarioRegistrado() &&
                     sessionPrefs.obtenerCorreo().isNotBlank() &&
                     sessionPrefs.obtenerPassword().isNotBlank()
 
-            // ✅ Solo pasa si AMBAS condiciones se cumplen
             if (firebaseLogged && hayCredencialesLocales) {
-                val perfil = repoAuth.obtenerMiPerfilCompleto()
+                val perfil      = repoAuth.obtenerMiPerfilCompleto()
                 empleadoCargado = perfil.second
 
                 empleadoCargado?.let { emp ->
@@ -135,7 +128,6 @@ fun AppNavigation() {
 
                 startDestination = "inicio"
             } else {
-                // Si Firebase tiene sesión pero no hay credenciales locales → cerrar sesión
                 repoAuth.logout()
                 startDestination = "login"
             }
@@ -146,21 +138,18 @@ fun AppNavigation() {
     }
 
     if (startDestination == null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
         val navBackStackEntry by nav.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
-        val mostrarMenu =
-            currentRoute == "inicio" ||
-                    currentRoute == "catalogo" ||
-                    currentRoute == "credito" ||
-                    currentRoute == "perfil"
+        // "detalleCredito" no está aquí a propósito → el menú se oculta automáticamente
+        val mostrarMenu = currentRoute == "inicio"   ||
+                currentRoute == "catalogo" ||
+                currentRoute == "credito"  ||
+                currentRoute == "perfil"
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -168,25 +157,24 @@ fun AppNavigation() {
                 if (mostrarMenu) {
                     MenuInferiorComisariato(
                         itemSeleccionado = when (currentRoute) {
-                            "inicio" -> "Inicio"
+                            "inicio"   -> "Inicio"
                             "catalogo" -> "Catálogo"
-                            "credito" -> "Mi Crédito"
-                            "perfil" -> "Perfil"
-                            else -> "Inicio"
+                            "credito"  -> "Mi Crédito"
+                            "perfil"   -> "Perfil"
+                            else       -> "Inicio"
                         },
                         onItemClick = { item ->
                             val ruta = when (item) {
-                                "Inicio" -> "inicio"
-                                "Catálogo" -> "catalogo"
+                                "Inicio"     -> "inicio"
+                                "Catálogo"   -> "catalogo"
                                 "Mi Crédito" -> "credito"
-                                "Perfil" -> "perfil"
-                                else -> "inicio"
+                                "Perfil"     -> "perfil"
+                                else         -> "inicio"
                             }
-
                             nav.navigate(ruta) {
                                 popUpTo("inicio") { saveState = true }
                                 launchSingleTop = true
-                                restoreState = true
+                                restoreState    = true
                             }
                         }
                     )
@@ -195,10 +183,11 @@ fun AppNavigation() {
         ) { innerPadding ->
 
             NavHost(
-                navController = nav,
+                navController    = nav,
                 startDestination = startDestination!!,
-                modifier = Modifier.padding(innerPadding)
+                modifier         = Modifier.padding(innerPadding)
             ) {
+
                 composable("login") {
                     LoginComisariatoScreen(
                         repo = repoAuth,
@@ -212,12 +201,25 @@ fun AppNavigation() {
 
                 composable("inicio") {
                     PantallaInicio(
-                        repo = repoAuth,
+                        repo         = repoAuth,
                         repoCreditos = repocreditos,
-
-                        onLogout = {
+                        onLogout     = {
                             nav.navigate("login") {
                                 popUpTo("inicio") { inclusive = true }
+                            }
+                        },
+                        onIrCatalogo = {
+                            nav.navigate("catalogo") {
+                                popUpTo("inicio") { saveState = true }
+                                launchSingleTop = true
+                                restoreState    = true
+                            }
+                        },
+                        onIrCredito  = {
+                            nav.navigate("credito") {
+                                popUpTo("inicio") { saveState = true }
+                                launchSingleTop = true
+                                restoreState    = true
                             }
                         }
                     )
@@ -225,14 +227,13 @@ fun AppNavigation() {
 
                 composable("catalogo") {
                     ProductosCatalogo(
-                        repoCategoria = repocat,
-                        repoProducto = repoprod,
-                        onBack = { nav.popBackStack() },
-                        onVerProductos = { categoria ->
+                        repoCategoria      = repocat,
+                        repoProducto       = repoprod,
+                        onBack             = { nav.popBackStack() },
+                        onVerProductos     = { categoria ->
                             nav.navigate("productos/${categoria.id}/${categoria.nombre}")
                         },
                         onVerDetalleProducto = { prod ->
-                            // 2. Guardamos el producto y navegamos
                             productoSeleccionado = prod
                             nav.navigate("detalleProducto")
                         }
@@ -240,17 +241,15 @@ fun AppNavigation() {
                 }
 
                 composable("productos/{categoriaId}/{categoriaNombre}") { backStack ->
-                    val categoriaId = backStack.arguments?.getString("categoriaId") ?: return@composable
+                    val categoriaId     = backStack.arguments?.getString("categoriaId") ?: return@composable
                     val categoriaNombre = backStack.arguments?.getString("categoriaNombre") ?: ""
-
-                    val categoria = remember(categoriaId) {
+                    val categoria       = remember(categoriaId) {
                         m_Categoria(id = categoriaId, nombre = categoriaNombre)
                     }
-
-                    ListaProductos (
-                        categoria = categoria,
-                        repo = repoprod,
-                        onBack = { nav.popBackStack() },
+                    ListaProductos(
+                        categoria   = categoria,
+                        repo        = repoprod,
+                        onBack      = { nav.popBackStack() },
                         onVerDetalle = { producto ->
                             productoSeleccionado = producto
                             nav.navigate("detalleProducto")
@@ -258,32 +257,45 @@ fun AppNavigation() {
                     )
                 }
 
-
-
+                // ── Mi Crédito ────────────────────────────────────────────────
                 composable("credito") {
-                    PantallaCredito()
-                }
-
-                composable("perfil") {
-                    PerfilScreen(
-                        repo = repoAuth,
+                    PantallaCredito(
+                        onVerDetalle = { credito ->
+                            creditoSeleccionado = credito        // guardar crédito seleccionado
+                            nav.navigate("detalleCredito")       // navegar al detalle
+                        }
                     )
-
                 }
 
+                // ── Detalle de crédito ────────────────────────────────────────
+                // El menú inferior se oculta automáticamente en esta ruta
+                composable("detalleCredito") {
+                    creditoSeleccionado?.let { credito ->
+                        PantallaDetalleCredito(
+                            credito = credito,
+                            onBack  = { nav.popBackStack() }
+                        )
+                    }
+                }
+
+                // ── Perfil ────────────────────────────────────────────────────
+                composable("perfil") {
+                    PerfilScreen(repo = repoAuth)
+                }
+
+                // ── Detalle de producto ───────────────────────────────────────
                 composable("detalleProducto") {
                     productoSeleccionado?.let { producto ->
-
                         val reservaPendiente = reservasEmpleado.firstOrNull {
                             it.productoId == producto.id && it.estado == "Pendiente"
                         }
                         DetalleProducto(
-                            producto = producto,
-                            repoCuotas = repocuotas,
-                            repoCreditos = repocreditos,
+                            producto         = producto,
+                            repoCuotas       = repocuotas,
+                            repoCreditos     = repocreditos,
                             reservaPendiente = reservaPendiente,
-                            empleado = empleadoCargado,
-                            onBack = { nav.popBackStack() },
+                            empleado         = empleadoCargado,
+                            onBack           = { nav.popBackStack() },
                             onCancelarReserva = { reservaId ->
                                 scope.launch {
                                     repocreditos.cancelarReserva(reservaId)
@@ -293,34 +305,33 @@ fun AppNavigation() {
                                 }
                             },
                             onReservar = { prod, plazo, cant ->
-                                productoSeleccionado = prod
-                                plazoSeleccionadoReserva = plazo
-                                cantidadSeleccionadaReserva = cant
+                                productoSeleccionado          = prod
+                                plazoSeleccionadoReserva      = plazo
+                                cantidadSeleccionadaReserva   = cant
                                 nav.navigate("confirmarReserva")
                             }
                         )
                     }
                 }
 
+                // ── Confirmar reserva ─────────────────────────────────────────
                 composable("confirmarReserva") {
-
                     productoSeleccionado?.let { producto ->
                         if (empleadoCargado != null) {
                             ConfirmarReserva(
-                                producto = producto,
-                                repoCreditos = repocreditos,
-                                plazoMeses = plazoSeleccionadoReserva,
-                                cantidad = cantidadSeleccionadaReserva,
-                                empleado = empleadoCargado!!,
-                                onBack = { nav.popBackStack() },
-                                onConfirmar = {
+                                producto      = producto,
+                                repoCreditos  = repocreditos,
+                                plazoMeses    = plazoSeleccionadoReserva,
+                                cantidad      = cantidadSeleccionadaReserva,
+                                empleado      = empleadoCargado!!,
+                                onBack        = { nav.popBackStack() },
+                                onConfirmar   = {
                                     scope.launch {
                                         empleadoCargado?.let { emp ->
                                             reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
                                         }
                                     }
                                     nav.popBackStack()
-
                                 }
                             )
                         } else {
@@ -330,16 +341,10 @@ fun AppNavigation() {
                         }
                     }
                 }
-
-
-
-                }
             }
         }
     }
-
-
-
+}
 
 fun autenticarConBiometria(
     activity: FragmentActivity,
@@ -351,15 +356,10 @@ fun autenticarConBiometria(
         object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
-                // Usamos un Handler para dar un respiro de 100ms y que el diálogo se cierre bien
-                Handler(Looper.getMainLooper()).postDelayed({
-                    onExito()
-                }, 100)
+                Handler(Looper.getMainLooper()).postDelayed({ onExito() }, 100)
             }
-
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
-                // Loguear el error ayuda a saber por qué falló
                 Log.e("BIOMETRIA", "Error: $errString")
             }
         })
@@ -367,17 +367,12 @@ fun autenticarConBiometria(
     val promptInfo = BiometricPrompt.PromptInfo.Builder()
         .setTitle("Acceso de Seguridad")
         .setSubtitle("Usa tu PIN, Patrón o Rostro")
-        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-        .setConfirmationRequired(false) // Esto hace que entre directo al validar
+        .setAllowedAuthenticators(
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        )
+        .setConfirmationRequired(false)
         .build()
 
     biometricPrompt.authenticate(promptInfo)
 }
-
-
-
-
-
-
-
-

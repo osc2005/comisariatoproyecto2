@@ -13,5 +13,16 @@ val TextSecondary = Color(0xFF555F70)      // Texto inactivo / subtítulos
 val GreenPrimary   = Color(0xFF2D7D62)
 val GreenContainer = Color(0xFFDFF0EB)
 
+//para la pantalla de crédito
+val OrangeWarning   = Color(0xFFB45309)   // estado Pendiente
+val OrangeContainer = Color(0xFFFEF3C7)
+val GrayNeutral     = Color(0xFF6B7280)   // estado Cancelado
+val GrayContainer   = Color(0xFFF3F4F6)
+val RedContainer    = Color(0xFFFFEDED)   // estado Rechazado
+val DividerColor    = Color(0xFFE5E7EB)   // líneas divisoras
+
+val YellowContainer = Color(0xFFFFF8E1)
+val YellowPrimary   = Color(0xFFF59F00)
+
 
 val RedCancel= Color(0xFFAB2929)
