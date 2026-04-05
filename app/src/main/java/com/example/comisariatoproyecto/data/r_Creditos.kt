@@ -3,11 +3,12 @@ package com.example.comisariatoproyecto.data
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-
-
-    import com.google.firebase.Timestamp
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 
 class r_Creditos {
 
@@ -114,6 +115,25 @@ class r_Creditos {
         }
     }
 
+    //  OBTENER CONTEO DE RESERVAS POR ESTADO
+    suspend fun obtenerConteoReservas(empleadoId: String): Pair<Int, Int> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val snap = db.collection("creditos")
+                    .whereEqualTo("empleadoId", empleadoId)
+                    .get()
+                    .await()
+
+                val pendientes = snap.documents.count { it.getString("estado") == "Pendiente" }
+                val activas = snap.documents.count { it.getString("estadoCredito") == "Activo" }
+
+                Pair(pendientes, activas)
+            } catch (e: Exception) {
+                Pair(0, 0)
+            }
+        }
+    }
+
     //obtener reservas del empleado conectado
     suspend fun obtenerReservasDeEmpleado(empleadoId: String): List<m_Creditos> {
         return db.collection("creditos")
@@ -138,4 +158,44 @@ class r_Creditos {
             .await()
     }
 
+    fun obtenerReservasDetalladas(empleadoId: String): Flow<List<m_CreditoDetalle>> =
+        callbackFlow {
+            val listener = db.collection("creditos")
+                .whereEqualTo("empleadoId", empleadoId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) {
+                        trySend(emptyList())
+                        return@addSnapshotListener
+                    }
+
+                    val lista = snapshot.documents.mapNotNull { doc ->
+                        try {
+                            @Suppress("UNCHECKED_CAST")
+                            val datos = doc.get("datosFinancierosHistoricos") as? Map<String, Any>
+
+                            m_CreditoDetalle(
+                                id             = doc.id,
+                                productoNombre = doc.getString("productoNombre") ?: "",
+                                productoImgUrl = doc.getString("productoImgUrl") ?: "",
+                                cantidad       = doc.getLong("cantidad")?.toInt() ?: 0,
+                                estado         = doc.getString("estado") ?: "",
+                                estadoCredito  = doc.getString("estadoCredito") ?: "",
+                                cuotasPagadas  = doc.getLong("cuotasPagadas")?.toInt() ?: 0,
+                                saldoPendiente = doc.getDouble("saldoPendiente") ?: 0.0,
+                                fechaRegistro  = doc.getTimestamp("fechaRegistro"),
+                                fechaAutoriza  = doc.getTimestamp("fechaAutoriza"),
+                                cuotaMensual   = (datos?.get("cuotaMensual") as? Double) ?: 0.0,
+                                plazoCuotas    = (datos?.get("plazoCuotas") as? Long)?.toInt() ?: 0,
+                                totalCredito   = (datos?.get("totalCredito") as? Double) ?: 0.0
+                            )
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    trySend(lista)
+                }
+
+            awaitClose { listener.remove() }
+        }
 }

@@ -44,12 +44,15 @@ private val TextHint       = Color(0xFF8C97A8)
 fun PantallaInicio(
     repo: r_permisos,
     repoCreditos: r_Creditos,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onIrCatalogo: () -> Unit,
+    onIrCredito: () -> Unit
 ) {
     var empleado by remember { mutableStateOf<Empleado?>(null) }
     var porcentajeCfg by remember { mutableDoubleStateOf(0.0) }
     var utilizadoReal by remember { mutableDoubleStateOf(0.0) }
     var cargando by remember { mutableStateOf(true) }
+    var conteoReservas by remember { mutableStateOf(Pair(0, 0)) }
 
 
     LaunchedEffect(Unit) {
@@ -61,6 +64,7 @@ fun PantallaInicio(
         empleado?.let { emp ->
             porcentajeCfg = repoCreditos.obtenerConfiguracionCredito()
             utilizadoReal = repoCreditos.obtenerCreditoUtilizadoReal(emp.codigoEmpleado)
+            conteoReservas = repoCreditos.obtenerConteoReservas(emp.codigoEmpleado)
         }
         cargando = false
     }
@@ -103,7 +107,8 @@ fun PantallaInicio(
 
             EtiquetaSeccion("Mis reservas")
             Spacer(Modifier.height(8.dp))
-            FilaResumenReservas(pendientes = 3, activas = 5)
+            FilaResumenReservas(pendientes = conteoReservas.first,
+                activas    = conteoReservas.second)
 
             Spacer(Modifier.height(20.dp))
 
@@ -113,7 +118,8 @@ fun PantallaInicio(
 
             EtiquetaSeccion("Acceso rápido")
             Spacer(Modifier.height(8.dp))
-            FilaAccesoRapido()
+            FilaAccesoRapido(onIrCatalogo = onIrCatalogo,
+                onIrCredito  = onIrCredito)
 
             Spacer(Modifier.height(28.dp))
         }
@@ -216,7 +222,12 @@ fun TarjetaLineaCredito(
 
 // ─── Resumen de reservas ──────────────────────────────────────────────────────
 @Composable
-fun FilaResumenReservas(pendientes: Int, activas: Int) {
+fun FilaResumenReservas(
+    pendientes: Int,
+    activas: Int,
+    onVerPendientes: () -> Unit = {},
+    onVerActivas: () -> Unit = {}
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -228,7 +239,8 @@ fun FilaResumenReservas(pendientes: Int, activas: Int) {
             sublabel  = "Por revisar",
             iconoBg   = NavyContainer.copy(alpha = 0.1f),
             iconoTint = NavyContainer,
-            icono     = Icons.Outlined.Schedule
+            icono     = Icons.Outlined.Schedule,
+            onClick   = onVerPendientes
         )
         CardConteo(
             modifier  = Modifier.weight(1f),
@@ -237,7 +249,8 @@ fun FilaResumenReservas(pendientes: Int, activas: Int) {
             sublabel  = "En pago",
             iconoBg   = GreenContainer,
             iconoTint = GreenPrimary,
-            icono     = Icons.Outlined.CheckCircle
+            icono     = Icons.Outlined.CheckCircle,
+            onClick   = onVerActivas
         )
     }
 }
@@ -250,14 +263,16 @@ fun CardConteo(
     sublabel: String,
     iconoBg: Color,
     iconoTint: Color,
-    icono: ImageVector
+    icono: ImageVector,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(0.5.dp, BorderSubtle)
+        border = BorderStroke(0.5.dp, BorderSubtle),
+        onClick = onClick
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Box(
@@ -360,7 +375,10 @@ fun TarjetaNotificacion() {
 
 // ─── Acceso rápido ────────────────────────────────────────────────────────────
 @Composable
-fun FilaAccesoRapido() {
+fun FilaAccesoRapido(
+    onIrCatalogo: () -> Unit,
+    onIrCredito: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -372,7 +390,7 @@ fun FilaAccesoRapido() {
             iconoBg   = NavyPrimary.copy(alpha = 0.08f),
             iconoTint = NavyPrimary,
             icono     = Icons.Outlined.ShoppingBag,
-            onClick   = { /* navegar a catálogo */ }
+            onClick   = onIrCatalogo
         )
         CardAcceso(
             modifier  = Modifier.weight(1f),
@@ -381,7 +399,7 @@ fun FilaAccesoRapido() {
             iconoBg   = GreenContainer,
             iconoTint = GreenPrimary,
             icono     = Icons.Outlined.Description,
-            onClick   = { /* navegar a reservas */ }
+            onClick   = onIrCredito
         )
     }
 }
