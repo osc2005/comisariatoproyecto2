@@ -1,12 +1,14 @@
 package com.example.comisariatoproyecto
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
@@ -17,7 +19,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,6 +65,10 @@ import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.initialize
 import kotlinx.coroutines.launch
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import android.app.Notification
+
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +77,11 @@ class MainActivity : FragmentActivity() {
         firebaseAppCheck.installAppCheckProviderFactory(
             PlayIntegrityAppCheckProviderFactory.getInstance()
         )
+
         super.onCreate(savedInstanceState)
+
+        crearCanalNotificaciones(this)
+
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         enableEdgeToEdge()
 
@@ -89,6 +98,34 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+fun crearCanalNotificaciones(activity: MainActivity) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val canal = NotificationChannel(
+            "canal_id",
+            "Canal General",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Notificaciones del sistema"
+        }
+
+        val manager = activity.getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(canal)
+    }
+}
+
+fun mostrarNotificacion(activity: MainActivity, titulo: String, mensaje: String) {
+    val builder = NotificationCompat.Builder(activity, "canal_id")
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle(titulo)
+        .setContentText(mensaje)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setDefaults(Notification.DEFAULT_SOUND)
+        .setAutoCancel(true)
+
+    val manager = activity.getSystemService(NotificationManager::class.java)
+    manager.notify(System.currentTimeMillis().toInt(), builder.build())
+}
+
 @Composable
 fun AppNavigation() {
     val nav          = rememberNavController()
@@ -102,12 +139,12 @@ fun AppNavigation() {
 
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
 
-    var productoSeleccionado       by remember { mutableStateOf<m_Productos?>(null) }
-    var creditoSeleccionado        by remember { mutableStateOf<m_CreditoDetalle?>(null) } // ← NUEVO
-    var plazoSeleccionadoReserva   by remember { mutableStateOf<Int?>(null) }
+    var productoSeleccionado        by remember { mutableStateOf<m_Productos?>(null) }
+    var creditoSeleccionado         by remember { mutableStateOf<m_CreditoDetalle?>(null) }
+    var plazoSeleccionadoReserva    by remember { mutableStateOf<Int?>(null) }
     var cantidadSeleccionadaReserva by remember { mutableIntStateOf(1) }
-    var empleadoCargado            by remember { mutableStateOf<Empleado?>(null) }
-    var reservasEmpleado           by remember { mutableStateOf<List<m_Creditos>>(emptyList()) }
+    var empleadoCargado             by remember { mutableStateOf<Empleado?>(null) }
+    var reservasEmpleado            by remember { mutableStateOf<List<m_Creditos>>(emptyList()) }
 
     val scope = rememberCoroutineScope()
 
@@ -227,10 +264,10 @@ fun AppNavigation() {
 
                 composable("catalogo") {
                     ProductosCatalogo(
-                        repoCategoria      = repocat,
-                        repoProducto       = repoprod,
-                        onBack             = { nav.popBackStack() },
-                        onVerProductos     = { categoria ->
+                        repoCategoria        = repocat,
+                        repoProducto         = repoprod,
+                        onBack               = { nav.popBackStack() },
+                        onVerProductos       = { categoria ->
                             nav.navigate("productos/${categoria.id}/${categoria.nombre}")
                         },
                         onVerDetalleProducto = { prod ->
@@ -247,9 +284,9 @@ fun AppNavigation() {
                         m_Categoria(id = categoriaId, nombre = categoriaNombre)
                     }
                     ListaProductos(
-                        categoria   = categoria,
-                        repo        = repoprod,
-                        onBack      = { nav.popBackStack() },
+                        categoria    = categoria,
+                        repo         = repoprod,
+                        onBack       = { nav.popBackStack() },
                         onVerDetalle = { producto ->
                             productoSeleccionado = producto
                             nav.navigate("detalleProducto")
@@ -261,14 +298,13 @@ fun AppNavigation() {
                 composable("credito") {
                     PantallaCredito(
                         onVerDetalle = { credito ->
-                            creditoSeleccionado = credito        // guardar crédito seleccionado
-                            nav.navigate("detalleCredito")       // navegar al detalle
+                            creditoSeleccionado = credito
+                            nav.navigate("detalleCredito")
                         }
                     )
                 }
 
                 // ── Detalle de crédito ────────────────────────────────────────
-                // El menú inferior se oculta automáticamente en esta ruta
                 composable("detalleCredito") {
                     creditoSeleccionado?.let { credito ->
                         PantallaDetalleCredito(
@@ -290,12 +326,12 @@ fun AppNavigation() {
                             it.productoId == producto.id && it.estado == "Pendiente"
                         }
                         DetalleProducto(
-                            producto         = producto,
-                            repoCuotas       = repocuotas,
-                            repoCreditos     = repocreditos,
-                            reservaPendiente = reservaPendiente,
-                            empleado         = empleadoCargado,
-                            onBack           = { nav.popBackStack() },
+                            producto          = producto,
+                            repoCuotas        = repocuotas,
+                            repoCreditos      = repocreditos,
+                            reservaPendiente  = reservaPendiente,
+                            empleado          = empleadoCargado,
+                            onBack            = { nav.popBackStack() },
                             onCancelarReserva = { reservaId ->
                                 scope.launch {
                                     repocreditos.cancelarReserva(reservaId)
@@ -319,13 +355,13 @@ fun AppNavigation() {
                     productoSeleccionado?.let { producto ->
                         if (empleadoCargado != null) {
                             ConfirmarReserva(
-                                producto      = producto,
-                                repoCreditos  = repocreditos,
-                                plazoMeses    = plazoSeleccionadoReserva,
-                                cantidad      = cantidadSeleccionadaReserva,
-                                empleado      = empleadoCargado!!,
-                                onBack        = { nav.popBackStack() },
-                                onConfirmar   = {
+                                producto     = producto,
+                                repoCreditos = repocreditos,
+                                plazoMeses   = plazoSeleccionadoReserva,
+                                cantidad     = cantidadSeleccionadaReserva,
+                                empleado     = empleadoCargado!!,
+                                onBack       = { nav.popBackStack() },
+                                onConfirmar  = {
                                     scope.launch {
                                         empleadoCargado?.let { emp ->
                                             reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)

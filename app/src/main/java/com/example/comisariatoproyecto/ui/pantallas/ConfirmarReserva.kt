@@ -1,4 +1,5 @@
 package com.example.comisariatoproyecto.ui.pantallas
+
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,9 +23,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.comisariatoproyecto.MainActivity       // ← NUEVO
+import com.example.comisariatoproyecto.mostrarNotificacion // ← NUEVO
 import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Creditos
@@ -44,8 +49,12 @@ fun ConfirmarReserva(
     onConfirmar: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? MainActivity   // ← NUEVO
     val scope = rememberCoroutineScope()
     var enviando by remember { mutableStateOf(false) }
+
+    // ← NUEVO: controla si se muestra el diálogo de éxito
+    var mostrarDialogoExito by remember { mutableStateOf(false) }
 
     fun formatLps(valor: Double): String {
         val fmt = NumberFormat.getNumberInstance(Locale("es", "HN"))
@@ -58,6 +67,57 @@ fun ConfirmarReserva(
     val precioBase = if (esCredito) producto?.precioCredito ?: 0.0 else producto?.precioContado ?: 0.0
     val totalFinal = precioBase * cantidad
     val cuotaMensual = if (esCredito && (plazoMeses ?: 0) > 0) totalFinal / plazoMeses!! else null
+
+    // ← NUEVO: Diálogo de éxito
+    if (mostrarDialogoExito) {
+        AlertDialog(
+            onDismissRequest = { /* No se cierra tocando fuera */ },
+            containerColor = SurfaceWhite,
+            shape = RoundedCornerShape(20.dp),
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color(0xFF22C55E),
+                    modifier = Modifier.size(52.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "¡Reserva enviada!",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = NavyPrimary,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = if (esCredito)
+                        "Tu solicitud de crédito para \"${producto?.nombre}\" fue recibida correctamente y pasará a revisión por un asesor."
+                    else
+                        "Tu reserva de \"${producto?.nombre}\" fue recibida correctamente y pasará a revisión por un asesor.",
+                    fontSize = 14.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        mostrarDialogoExito = false
+                        onConfirmar()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary)
+                ) {
+                    Text("Entendido", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = SurfaceBase,
@@ -85,8 +145,22 @@ fun ConfirmarReserva(
                                 enviando = true
                                 try {
                                     repoCreditos.crearReserva(producto, cantidad, plazoMeses, empleado)
-                                    Toast.makeText(context, "Reserva enviada con éxito", Toast.LENGTH_SHORT).show()
-                                    onConfirmar()
+
+                                    // ← NUEVO: notificación del sistema Android
+                                    activity?.let {
+                                        mostrarNotificacion(
+                                            it,
+                                            "¡Reserva enviada!",
+                                            if (esCredito)
+                                                "Tu solicitud de crédito para \"${producto.nombre}\" está en revisión."
+                                            else
+                                                "Tu reserva de \"${producto.nombre}\" está en revisión."
+                                        )
+                                    }
+
+                                    // ← NUEVO: mostrar diálogo de éxito en lugar del Toast
+                                    mostrarDialogoExito = true
+
                                 } catch (e: Exception) {
                                     Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                                 } finally {
@@ -95,12 +169,18 @@ fun ConfirmarReserva(
                             }
                         },
                         enabled = !enviando,
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary)
                     ) {
                         if (enviando) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
                         } else {
                             Text("CONFIRMAR SOLICITUD", fontWeight = FontWeight.Bold)
                         }
@@ -126,17 +206,26 @@ fun ConfirmarReserva(
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(0.5.dp, NavyPrimary.copy(alpha = 0.1f))
             ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     AsyncImage(
                         model = producto.imagenUrl,
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(producto.nombre, fontWeight = FontWeight.Bold, color = NavyPrimary)
-                        Text(if (esCredito) "Crédito a $plazoMeses meses" else "Pago al Contado", fontSize = 12.sp, color = TextSecondary)
+                        Text(
+                            if (esCredito) "Crédito a $plazoMeses meses" else "Pago al Contado",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
                     }
                     Text(formatLps(totalFinal), fontWeight = FontWeight.Bold, color = NavyPrimary)
                 }
@@ -154,10 +243,16 @@ fun ConfirmarReserva(
                     .border(0.5.dp, NavyPrimary.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                     .padding(16.dp)
             ) {
-                Text("RESUMEN DE PAGO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 1.sp)
+                Text(
+                    "RESUMEN DE PAGO",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary,
+                    letterSpacing = 1.sp
+                )
                 Spacer(Modifier.height(12.dp))
 
-                FilaTexto("Cantidad:", "$cantidad ${if(cantidad==1) "unidad" else "unidades"}")
+                FilaTexto("Cantidad:", "$cantidad ${if (cantidad == 1) "unidad" else "unidades"}")
                 FilaTexto("Precio unitario:", formatLps(precioBase))
 
                 HorizontalDivider(Modifier.padding(vertical = 10.dp), color = SurfaceBase)
@@ -173,13 +268,24 @@ fun ConfirmarReserva(
 
             // Banner Info
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(NavyPrimary.copy(alpha = 0.05f)).padding(16.dp),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(NavyPrimary.copy(alpha = 0.05f))
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.Info, null, Modifier.size(18.dp), tint = NavyPrimary.copy(alpha = 0.5f))
+                Icon(
+                    Icons.Default.Info,
+                    null,
+                    Modifier.size(18.dp),
+                    tint = NavyPrimary.copy(alpha = 0.5f)
+                )
                 Text(
                     "Tu reserva sera evaluada por un asesor. El estado de tu reserva se mostrara en el inicio.",
-                    fontSize = 12.sp, color = NavyPrimary.copy(alpha = 0.7f), lineHeight = 18.sp
+                    fontSize = 12.sp,
+                    color = NavyPrimary.copy(alpha = 0.7f),
+                    lineHeight = 18.sp
                 )
             }
         }
@@ -188,8 +294,18 @@ fun ConfirmarReserva(
 
 @Composable
 fun FilaTexto(label: String, valor: String, esNegrita: Boolean = false) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(label, fontSize = 14.sp, color = TextSecondary)
-        Text(valor, fontSize = 14.sp, fontWeight = if (esNegrita) FontWeight.Bold else FontWeight.Medium, color = NavyPrimary)
+        Text(
+            valor,
+            fontSize = 14.sp,
+            fontWeight = if (esNegrita) FontWeight.Bold else FontWeight.Medium,
+            color = NavyPrimary
+        )
     }
 }

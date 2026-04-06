@@ -26,7 +26,6 @@ class r_Creditos {
         val porcentajeLimite = configSnap.getDouble("porcentajeLimite")
             ?: throw Exception("Error: No se encontró la configuración 'porcentajeLimite' en Firebase.")
 
-
         val esCredito = plazoMeses != null
         val precioBase = if (esCredito) producto.precioCredito else producto.precioContado
         val totalCredito = precioBase * cantidad
@@ -59,7 +58,6 @@ class r_Creditos {
             )
         )
 
-        // Transacción atómica: verificar stock disponible y crear documento
         db.runTransaction { tx ->
             val snapshot = tx.get(productoRef)
             val stockActual = snapshot.getLong("stock")?.toInt() ?: 0
@@ -70,14 +68,10 @@ class r_Creditos {
                 throw Exception("Solo hay $disponibleParaVenta unidades disponibles.")
             }
 
-            // Hay stock suficiente — crear la reserva
-            // El trigger se encarga de restar el stock automáticamente
             tx.set(db.collection("creditos").document(), nuevoCredito)
         }.await()
     }
 
-// ─── OBTENER CREDITO UTILIZADO REAL ───────────────────────────────────────────
-//suma las cuotas mensuales de los creditos activos que tiene el empleado conectado
     suspend fun obtenerCreditoUtilizadoReal(empleadoId: String): Double {
         return withContext(Dispatchers.IO) {
             try {
@@ -86,7 +80,6 @@ class r_Creditos {
                     .whereEqualTo("estadoCredito", "Activo")
                     .get()
                     .await()
-
 
                 snap.documents.sumOf {
                     it.getDouble("datosFinancierosHistoricos.cuotaMensual") ?: 0.0
@@ -97,7 +90,6 @@ class r_Creditos {
         }
     }
 
-    // ─── OBTENER CONFIGURACIÓN DEL CRÉDITO ───────────────────────────────────────
     suspend fun obtenerConfiguracionCredito(): Double {
         return withContext(Dispatchers.IO) {
             try {
@@ -115,7 +107,6 @@ class r_Creditos {
         }
     }
 
-    //  OBTENER CONTEO DE RESERVAS POR ESTADO
     suspend fun obtenerConteoReservas(empleadoId: String): Pair<Int, Int> {
         return withContext(Dispatchers.IO) {
             try {
@@ -134,7 +125,6 @@ class r_Creditos {
         }
     }
 
-    //obtener reservas del empleado conectado
     suspend fun obtenerReservasDeEmpleado(empleadoId: String): List<m_Creditos> {
         return db.collection("creditos")
             .whereEqualTo("empleadoId", empleadoId)
@@ -149,8 +139,6 @@ class r_Creditos {
             }
     }
 
-
-    //cancelar reserva de lado del cliente
     suspend fun cancelarReserva(reservaId: String) {
         db.collection("creditos")
             .document(reservaId)
@@ -198,4 +186,36 @@ class r_Creditos {
 
             awaitClose { listener.remove() }
         }
+
+    // ─── NUEVA: obtener reservas Aprobadas o Canceladas para notificaciones ──
+    suspend fun obtenerReservasParaNotificar(empleadoId: String): List<NotificacionReserva> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val snap = db.collection("creditos")
+                    .whereEqualTo("empleadoId", empleadoId)
+                    .get()
+                    .await()
+
+                snap.documents.mapNotNull { doc ->
+                    val estado = doc.getString("estado") ?: return@mapNotNull null
+                    if (estado != "Aprobado" && estado != "Rechazado") return@mapNotNull null
+
+                    NotificacionReserva(
+                        id             = doc.id,
+                        productoNombre = doc.getString("productoNombre") ?: "Producto",
+                        estado         = estado
+                    )
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
 }
+
+// ─── Modelo simple para notificaciones in-app ────────────────────────────────
+data class NotificacionReserva(
+    val id: String,
+    val productoNombre: String,
+    val estado: String   // "Aprobado" o "Cancelado"
+)
