@@ -105,4 +105,26 @@ class SessionPrefs(context: Context) {
      */
     fun limpiarSesionLocal() =
         prefs.edit().clear().apply()
+
+    fun guardarIdsNotificados(ids: Set<String>) {
+        prefs.edit()
+            .putStringSet("ids_notificados", ids)
+            .apply()
+    }
+
+    fun obtenerIdsNotificados(): Set<String> {
+        return prefs.getStringSet("ids_notificados", emptySet()) ?: emptySet()
+    }
+
+
+    // IDs ya leídos en el popup (para borrarlos del badge y del popup)
+    fun guardarIdsLeidos(ids: Set<String>) {
+        prefs.edit().putStringSet("ids_leidos", ids).apply()
+    }
+
+    fun obtenerIdsLeidos(): Set<String> {
+        return prefs.getStringSet("ids_leidos", emptySet()) ?: emptySet()
+    }
+
 }
+
