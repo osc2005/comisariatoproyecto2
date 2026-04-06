@@ -21,18 +21,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.comisariatoproyecto.data.m_Categoria
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Categoria
 import com.example.comisariatoproyecto.data.r_Productos
-
-// Importación de tu paleta oficial definida en Color.kt
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.ui.theme.SurfaceBase
 import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
@@ -50,34 +50,24 @@ fun ProductosCatalogo(
     val categorias        by repoCategoria.obtenerCategorias().collectAsState(initial = null)
     val todosLosProductos by repoProducto.obtenerProductos().collectAsState(initial = emptyList())
 
-    var textoBusqueda      by remember { mutableStateOf("") }
+    var textoBusqueda       by remember { mutableStateOf("") }
     var expandirSugerencias by remember { mutableStateOf(false) }
-
-//    val sugerencias = remember(textoBusqueda, todosLosProductos) {
-//        if (textoBusqueda.isBlank()) emptyList()
-//        else todosLosProductos.filter {
-//            it.nombre.contains(textoBusqueda, ignoreCase = true) ||
-//                    it.descripcion.contains(textoBusqueda, ignoreCase = true)
-//        }.take(8)
-//    }
 
     val sugerencias = remember(textoBusqueda, todosLosProductos) {
         if (textoBusqueda.isBlank()) emptyList()
         else todosLosProductos.filter {
-            val tieneStock = it.stock > it.stockMinimo // Filtra por stock disponible
+            val tieneStock = it.stock > it.stockMinimo
             tieneStock && (it.nombre.contains(textoBusqueda, ignoreCase = true) ||
                     it.descripcion.contains(textoBusqueda, ignoreCase = true))
         }.take(8)
     }
 
-    // Sin Scaffold propio — usamos Column directa para controlar el header
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(SurfaceBase)
     ) {
-
-        // ── HEADER (igual al de PantallaInicio) ────────────────────────────
+        //  HEADER
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -100,7 +90,7 @@ fun ProductosCatalogo(
             }
         }
 
-        // ── CONTENIDO ──────────────────────────────────────────────────────
+        //  CONTENIDO
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -108,7 +98,7 @@ fun ProductosCatalogo(
         ) {
             Spacer(Modifier.height(16.dp))
 
-            // ── Barra de búsqueda predictiva ────────────────────────────────
+            //  Barra de búsqueda predictiva
             ExposedDropdownMenuBox(
                 expanded = expandirSugerencias && sugerencias.isNotEmpty(),
                 onExpandedChange = {}
@@ -139,15 +129,14 @@ fun ProductosCatalogo(
                     },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = NavyPrimary,
-                        unfocusedBorderColor = NavyPrimary.copy(alpha = 0.2f),
-                        focusedContainerColor = SurfaceWhite,
+                        focusedBorderColor     = NavyPrimary,
+                        unfocusedBorderColor   = NavyPrimary.copy(alpha = 0.2f),
+                        focusedContainerColor   = SurfaceWhite,
                         unfocusedContainerColor = SurfaceWhite
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                // Sugerencias del dropdown
                 if (sugerencias.isNotEmpty()) {
                     ExposedDropdownMenu(
                         expanded = expandirSugerencias,
@@ -183,7 +172,7 @@ fun ProductosCatalogo(
 
             Spacer(Modifier.height(20.dp))
 
-            // ── Separador con label ─────────────────────────────────────────
+            //  Separador con label
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -200,14 +189,13 @@ fun ProductosCatalogo(
 
             Spacer(Modifier.height(14.dp))
 
-            // ── Grid 2×2 de categorías ──────────────────────────────────────
+            //  Grid 2×2 de categorías
             when {
                 categorias == null -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = NavyPrimary)
                     }
                 }
-
                 categorias!!.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
@@ -217,7 +205,6 @@ fun ProductosCatalogo(
                         )
                     }
                 }
-
                 else -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
@@ -229,7 +216,7 @@ fun ProductosCatalogo(
                         items(categorias!!, key = { it.id }) { categoria ->
                             TarjetaCategoria(
                                 categoria = categoria,
-                                onClick = { onVerProductos(categoria) }
+                                onClick   = { onVerProductos(categoria) }
                             )
                         }
                     }
@@ -239,7 +226,7 @@ fun ProductosCatalogo(
     }
 }
 
-// ── Tarjeta individual de categoría ─────────────────────────────────────────
+//  Tarjeta de categoría con imagen de fondo y gradiente negro suave
 @Composable
 fun TarjetaCategoria(
     categoria: m_Categoria,
@@ -255,15 +242,10 @@ fun TarjetaCategoria(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(96.dp)
+            .height(120.dp)
             .scale(scale),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = SurfaceWhite,
-            disabledContainerColor = SurfaceWhite
-        ),
-        border = BorderStroke(1.dp, NavyPrimary.copy(alpha = 0.1f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         interactionSource = remember { MutableInteractionSource() }.also { source ->
             LaunchedEffect(source) {
                 source.interactions.collect { interaction ->
@@ -272,19 +254,53 @@ fun TarjetaCategoria(
             }
         }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+
+            // Fondo de color fallback si la imagen no carga o imagenUrl esta vacio
+            // Se ve NavyPrimary con gradiente y texto blanco
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(NavyPrimary.copy(alpha = 0.85f))
+            )
+
+            // Imagen de fondo desde Firebase Storage
+            // colección: categoria, campo: imagenUrl
+            // ifBlank { null } hace que Coil no intente cargar si el campo esta vacio
+            AsyncImage(
+                model              = categoria.imagenUrl.ifBlank { null },
+                contentDescription = categoria.nombre,
+                modifier           = Modifier.fillMaxSize(),
+                contentScale       = ContentScale.Crop
+            )
+
+            // Gradiente negro suave de abajo hacia arriba para que el texto sea legible
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.25f),
+                                Color.Black.copy(alpha = 0.65f)
+                            )
+                        )
+                    )
+            )
+
+            // Nombre de la categoría — abajo a la izquierda, en blanco
             Text(
-                text = categoria.nombre,
+                text       = categoria.nombre,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
-                color = NavyPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                fontSize   = 13.sp,
+                color      = Color.White,
+                maxLines   = 1,
+                overflow   = TextOverflow.Ellipsis,
+                modifier   = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             )
         }
     }
