@@ -46,6 +46,7 @@ import com.example.comisariatoproyecto.data.r_Categoria
 import com.example.comisariatoproyecto.data.r_Creditos
 import com.example.comisariatoproyecto.data.r_CuotaCredito
 import com.example.comisariatoproyecto.data.r_Productos
+import com.example.comisariatoproyecto.data.r_Reseñas
 import com.example.comisariatoproyecto.data.r_permisos
 import com.example.comisariatoproyecto.ui.pantallas.ConfirmarReserva
 import com.example.comisariatoproyecto.ui.pantallas.DetalleProducto
@@ -57,6 +58,8 @@ import com.example.comisariatoproyecto.ui.pantallas.PantallaDetalleCredito
 import com.example.comisariatoproyecto.ui.pantallas.PantallaInicio
 import com.example.comisariatoproyecto.ui.pantallas.PerfilScreen
 import com.example.comisariatoproyecto.ui.pantallas.ProductosCatalogo
+import com.example.comisariatoproyecto.ui.pantallas.ComentariosProducto
+import com.example.comisariatoproyecto.ui.pantallas.OpinarBottomSheet
 import com.example.comisariatoproyecto.ui.theme.ComisariatoProyectoTheme
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.utils.SessionPrefs
@@ -66,11 +69,7 @@ import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderF
 import com.google.firebase.initialize
 import kotlinx.coroutines.launch
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import android.app.Notification
-import com.example.comisariatoproyecto.ui.pantallas.ComentariosProducto
-import com.example.comisariatoproyecto.ui.pantallas.OpinarBottomSheet
-
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,7 +108,6 @@ fun crearCanalNotificaciones(activity: MainActivity) {
         ).apply {
             description = "Notificaciones del sistema"
         }
-
         val manager = activity.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(canal)
     }
@@ -123,7 +121,6 @@ fun mostrarNotificacion(activity: MainActivity, titulo: String, mensaje: String)
         .setPriority(NotificationCompat.PRIORITY_HIGH)
         .setDefaults(Notification.DEFAULT_SOUND)
         .setAutoCancel(true)
-
     val manager = activity.getSystemService(NotificationManager::class.java)
     manager.notify(System.currentTimeMillis().toInt(), builder.build())
 }
@@ -136,6 +133,7 @@ fun AppNavigation() {
     val repoprod     = remember { r_Productos() }
     val repocreditos = remember { r_Creditos() }
     val repocuotas   = remember { r_CuotaCredito() }
+    val repoReseñas  = remember { r_Reseñas() }
     val context      = LocalContext.current
     val sessionPrefs = remember { SessionPrefs(context) }
 
@@ -147,6 +145,10 @@ fun AppNavigation() {
     var cantidadSeleccionadaReserva by remember { mutableIntStateOf(1) }
     var empleadoCargado             by remember { mutableStateOf<Empleado?>(null) }
     var reservasEmpleado            by remember { mutableStateOf<List<m_Creditos>>(emptyList()) }
+
+    // Estados para Opinar desde Créditos
+    var mostrarSheetOpinar by remember { mutableStateOf(false) }
+    var creditoParaOpinar by remember { mutableStateOf<m_CreditoDetalle?>(null) }
 
     val scope = rememberCoroutineScope()
 
@@ -184,7 +186,6 @@ fun AppNavigation() {
         val navBackStackEntry by nav.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
-        // "detalleCredito" no está aquí a propósito → el menú se oculta automáticamente
         val mostrarMenu = currentRoute == "inicio"   ||
                 currentRoute == "catalogo" ||
                 currentRoute == "credito"  ||
@@ -221,193 +222,244 @@ fun AppNavigation() {
             }
         ) { innerPadding ->
 
-            NavHost(
-                navController    = nav,
-                startDestination = startDestination!!,
-                modifier         = Modifier.padding(innerPadding)
-            ) {
+            Box(modifier = Modifier.padding(innerPadding)) {
+                NavHost(
+                    navController    = nav,
+                    startDestination = startDestination!!,
+                    modifier         = Modifier.fillMaxSize()
+                ) {
 
-                composable("login") {
-                    LoginComisariatoScreen(
-                        repo = repoAuth,
-                        onLoginSuccess = {
-                            nav.navigate("inicio") {
-                                popUpTo("login") { inclusive = true }
+                    composable("login") {
+                        LoginComisariatoScreen(
+                            repo = repoAuth,
+                            onLoginSuccess = {
+                                nav.navigate("inicio") {
+                                    popUpTo("login") { inclusive = true }
+                                }
                             }
-                        }
-                    )
-                }
-
-                composable("inicio") {
-                    PantallaInicio(
-                        repo         = repoAuth,
-                        repoCreditos = repocreditos,
-                        onLogout     = {
-                            nav.navigate("login") {
-                                popUpTo("inicio") { inclusive = true }
-                            }
-                        },
-                        onIrCatalogo = {
-                            nav.navigate("catalogo") {
-                                popUpTo("inicio") { saveState = true }
-                                launchSingleTop = true
-                                restoreState    = true
-                            }
-                        },
-                        onIrCredito  = {
-                            nav.navigate("credito") {
-                                popUpTo("inicio") { saveState = true }
-                                launchSingleTop = true
-                                restoreState    = true
-                            }
-                        }
-                    )
-                }
-
-                composable("catalogo") {
-                    ProductosCatalogo(
-                        repoCategoria        = repocat,
-                        repoProducto         = repoprod,
-                        onBack               = { nav.popBackStack() },
-                        onVerProductos       = { categoria ->
-                            nav.navigate("productos/${categoria.id}/${categoria.nombre}")
-                        },
-                        onVerDetalleProducto = { prod ->
-                            productoSeleccionado = prod
-                            nav.navigate("detalleProducto")
-                        }
-                    )
-                }
-
-                composable("productos/{categoriaId}/{categoriaNombre}") { backStack ->
-                    val categoriaId     = backStack.arguments?.getString("categoriaId") ?: return@composable
-                    val categoriaNombre = backStack.arguments?.getString("categoriaNombre") ?: ""
-                    val categoria       = remember(categoriaId) {
-                        m_Categoria(id = categoriaId, nombre = categoriaNombre)
-                    }
-                    ListaProductos(
-                        categoria    = categoria,
-                        repo         = repoprod,
-                        onBack       = { nav.popBackStack() },
-                        onVerDetalle = { producto ->
-                            productoSeleccionado = producto
-                            nav.navigate("detalleProducto")
-                        }
-                    )
-                }
-
-                // ── Mi Crédito ────────────────────────────────────────────────
-                composable("credito") {
-                    PantallaCredito(
-                        onVerDetalle = { credito ->
-                            creditoSeleccionado = credito
-                            nav.navigate("detalleCredito")
-                        }
-                    )
-                }
-
-                // ── Detalle de crédito ────────────────────────────────────────
-                composable("detalleCredito") {
-                    creditoSeleccionado?.let { credito ->
-                        PantallaDetalleCredito(
-                            credito = credito,
-                            onBack  = { nav.popBackStack() }
                         )
                     }
-                }
 
-                // ── Perfil ────────────────────────────────────────────────────
-                composable("perfil") {
-                    PerfilScreen(repo = repoAuth)
-                }
-
-                // ── Detalle de producto ───────────────────────────────────────
-                composable("detalleProducto") {
-                    productoSeleccionado?.let { producto ->
-                        val reservaPendiente = reservasEmpleado.firstOrNull {
-                            it.productoId == producto.id && it.estado == "Pendiente"
-                        }
-                        DetalleProducto(
-                            producto          = producto,
-                            repoCuotas        = repocuotas,
-                            repoCreditos      = repocreditos,
-                            reservaPendiente  = reservaPendiente,
-                            empleado          = empleadoCargado,
-                            onBack            = { nav.popBackStack() },
-                            onCancelarReserva = { reservaId ->
-                                scope.launch {
-                                    repocreditos.cancelarReserva(reservaId)
-                                    reservasEmpleado = reservasEmpleado.map {
-                                        if (it.id == reservaId) it.copy(estado = "Cancelado") else it
-                                    }
+                    composable("inicio") {
+                        PantallaInicio(
+                            repo         = repoAuth,
+                            repoCreditos = repocreditos,
+                            onLogout     = {
+                                nav.navigate("login") {
+                                    popUpTo("inicio") { inclusive = true }
                                 }
                             },
-                            onVerComentarios = { id ->
-                                nav.navigate("comentariosProducto")
+                            onIrCatalogo = {
+                                nav.navigate("catalogo") {
+                                    popUpTo("inicio") { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState    = true
+                                }
                             },
-
-                            onReservar = { prod, plazo, cant ->
-                                productoSeleccionado          = prod
-                                plazoSeleccionadoReserva      = plazo
-                                cantidadSeleccionadaReserva   = cant
-                                nav.navigate("confirmarReserva")
+                            onIrCredito  = {
+                                nav.navigate("credito") {
+                                    popUpTo("inicio") { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState    = true
+                                }
                             }
                         )
                     }
-                }
-// ── Comentarios de producto ───────────────────────────────────────
-                // ── Comentarios de producto ───────────────────────────────────────
-                composable("comentariosProducto") {
-                    // Usamos el patrón de "let" igual que en detalleProducto
-                    productoSeleccionado?.let { producto ->
-                        var mostrarSheet by remember { mutableStateOf(false) }
 
-                        ComentariosProducto(
-                            productoId = producto.id,
-                            onBack     = { nav.popBackStack() },
-                            onOpinar   = { mostrarSheet = true }
+                    composable("catalogo") {
+                        ProductosCatalogo(
+                            repoCategoria        = repocat,
+                            repoProducto         = repoprod,
+                            onBack               = { nav.popBackStack() },
+                            onVerProductos       = { categoria ->
+                                nav.navigate("productos/${categoria.id}/${categoria.nombre}")
+                            },
+                            onVerDetalleProducto = { prod ->
+                                productoSeleccionado = prod
+                                nav.navigate("detalleProducto")
+                            }
                         )
+                    }
 
-                        // El BottomSheet se dispara con el estado local
-                        if (mostrarSheet) {
-                            OpinarBottomSheet(
-                                productoNombre    = producto.nombre,
-                                productoImagenUrl = producto.imagenUrl,
-                                onDismiss         = { mostrarSheet = false },
-                                onEnviar          = { estrellas, comentario ->
-                                    // Aquí irá tu lógica de Firebase en el futuro
-                                    mostrarSheet = false
+                    composable("productos/{categoriaId}/{categoriaNombre}") { backStack ->
+                        val categoriaId     = backStack.arguments?.getString("categoriaId") ?: return@composable
+                        val categoriaNombre = backStack.arguments?.getString("categoriaNombre") ?: ""
+
+                        ListaProductos(
+                            categoria       = m_Categoria(id = categoriaId, nombre = categoriaNombre),
+                            repo            = repoprod,
+                            onBack          = { nav.popBackStack() },
+                            onVerDetalle    = { prod ->
+                                productoSeleccionado = prod
+                                nav.navigate("detalleProducto")
+                            }
+                        )
+                    }
+
+                    composable("credito") {
+                        PantallaCredito(
+                            onVerDetalle = { credito ->
+                                creditoSeleccionado = credito
+                                nav.navigate("detalleCredito")
+                            },
+                            onOpinar = { credito ->
+                                creditoParaOpinar = credito
+                                mostrarSheetOpinar = true
+                            }
+                        )
+                    }
+
+                    composable("detalleCredito") {
+                        creditoSeleccionado?.let { credito ->
+                            PantallaDetalleCredito(
+                                credito = credito,
+                                onBack  = { nav.popBackStack() },
+                                onOpinar = {
+                                    creditoParaOpinar = credito
+                                    mostrarSheetOpinar = true
                                 }
                             )
                         }
                     }
-                }
-                // ── Confirmar reserva ─────────────────────────────────────────
-                composable("confirmarReserva") {
-                    productoSeleccionado?.let { producto ->
-                        if (empleadoCargado != null) {
-                            ConfirmarReserva(
-                                producto     = producto,
-                                repoCreditos = repocreditos,
-                                plazoMeses   = plazoSeleccionadoReserva,
-                                cantidad     = cantidadSeleccionadaReserva,
-                                empleado     = empleadoCargado!!,
-                                onBack       = { nav.popBackStack() },
-                                onConfirmar  = {
+
+                    composable("perfil") {
+                        PerfilScreen(repo = repoAuth)
+                    }
+
+                    composable("detalleProducto") {
+                        productoSeleccionado?.let { producto ->
+                            val reservaPendiente = reservasEmpleado.firstOrNull {
+                                it.productoId == producto.id && it.estado == "Pendiente"
+                            }
+                            DetalleProducto(
+                                producto          = producto,
+                                repoCuotas        = repocuotas,
+                                repoCreditos      = repocreditos,
+                                repoReseñas       = repoReseñas,
+                                reservaPendiente  = reservaPendiente,
+                                empleado          = empleadoCargado,
+                                onBack            = { nav.popBackStack() },
+                                onCancelarReserva = { reservaId ->
                                     scope.launch {
-                                        empleadoCargado?.let { emp ->
-                                            reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                                        repocreditos.cancelarReserva(reservaId)
+                                        reservasEmpleado = reservasEmpleado.map {
+                                            if (it.id == reservaId) it.copy(estado = "Cancelado") else it
                                         }
                                     }
-                                    nav.popBackStack()
+                                },
+                                onVerComentarios = {
+                                    nav.navigate("comentariosProducto")
+                                },
+                                onReservar = { prod, plazo, cant ->
+                                    productoSeleccionado        = prod
+                                    plazoSeleccionadoReserva    = plazo
+                                    cantidadSeleccionadaReserva = cant
+                                    nav.navigate("confirmarReserva")
                                 }
                             )
-                        } else {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = NavyPrimary)
+                        }
+                    }
+
+                    composable("comentariosProducto") {
+                        productoSeleccionado?.let { producto ->
+                            var mostrarSheet          by remember { mutableStateOf(false) }
+                            var creditoHabilitadorSheet by remember { mutableStateOf("") }
+
+                            ComentariosProducto(
+                                productoId   = producto.id,
+                                empleadoId   = empleadoCargado?.codigoEmpleado ?: "",
+                                repoReseñas  = repoReseñas,
+                                repoCreditos = repocreditos,
+                                onBack       = { nav.popBackStack() },
+                                onOpinar     = { creditoId ->
+                                    creditoHabilitadorSheet = creditoId
+                                    mostrarSheet = true
+                                }
+                            )
+
+                            if (mostrarSheet) {
+                                OpinarBottomSheet(
+                                    productoNombre    = producto.nombre,
+                                    productoImagenUrl = producto.imagenUrl,
+                                    onDismiss         = { mostrarSheet = false },
+                                    onEnviar          = { estrellas, comentario ->
+                                        scope.launch {
+                                            try {
+                                                repoReseñas.crearReseña(
+                                                    creditoId         = creditoHabilitadorSheet,
+                                                    productoId        = producto.id,
+                                                    productoNombre    = producto.nombre,
+                                                    empleadoId        = empleadoCargado?.codigoEmpleado ?: "",
+                                                    empleadoNombres   = empleadoCargado?.nombres ?: "",
+                                                    empleadoApellidos = empleadoCargado?.apellidos ?: "",
+                                                    estrellas         = estrellas,
+                                                    comentario        = comentario
+                                                )
+                                            } catch (e: Exception) {
+                                                Log.e("Reseñas", "Error al guardar reseña: ${e.message}")
+                                            }
+                                            mostrarSheet = false
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
+
+                    composable("confirmarReserva") {
+                        productoSeleccionado?.let { producto ->
+                            if (empleadoCargado != null) {
+                                ConfirmarReserva(
+                                    repoCreditos = repocreditos,
+                                    producto     = producto,
+                                    plazoMeses   = plazoSeleccionadoReserva,
+                                    cantidad     = cantidadSeleccionadaReserva,
+                                    empleado     = empleadoCargado!!,
+                                    onBack       = { nav.popBackStack() },
+                                    onConfirmar  = {
+                                        scope.launch {
+                                            empleadoCargado?.let { emp ->
+                                                reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                                            }
+                                        }
+                                        nav.popBackStack()
+                                    }
+                                )
+                            } else {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = NavyPrimary)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Global Opinar BottomSheet (Desde lista/detalle de créditos)
+                if (mostrarSheetOpinar && creditoParaOpinar != null) {
+                    OpinarBottomSheet(
+                        productoNombre = creditoParaOpinar!!.productoNombre,
+                        productoImagenUrl = creditoParaOpinar!!.productoImgUrl,
+                        onDismiss = { mostrarSheetOpinar = false },
+                        onEnviar = { estrellas, comentario ->
+                            scope.launch {
+                                try {
+                                    repoReseñas.crearReseña(
+                                        creditoId = creditoParaOpinar!!.id,
+                                        productoId = "", // Podrías guardarlo si lo tuvieras en m_CreditoDetalle
+                                        productoNombre = creditoParaOpinar!!.productoNombre,
+                                        empleadoId = empleadoCargado?.codigoEmpleado ?: "",
+                                        empleadoNombres = empleadoCargado?.nombres ?: "",
+                                        empleadoApellidos = empleadoCargado?.apellidos ?: "",
+                                        estrellas = estrellas,
+                                        comentario = comentario
+                                    )
+                                } catch (e: Exception) {
+                                    Log.e("Reseñas", "Error: ${e.message}")
+                                }
+                                mostrarSheetOpinar = false
+                            }
+                        }
+                    )
                 }
             }
         }
