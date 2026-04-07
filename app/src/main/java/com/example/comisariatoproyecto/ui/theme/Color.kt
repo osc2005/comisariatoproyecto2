@@ -26,3 +26,6 @@ val YellowPrimary   = Color(0xFFF59F00)
 
 
 val RedCancel= Color(0xFFAB2929)
+
+val YellowStars =Color(0xFFFACC15)
+

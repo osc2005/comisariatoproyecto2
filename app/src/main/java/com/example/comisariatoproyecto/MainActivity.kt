@@ -68,6 +68,8 @@ import kotlinx.coroutines.launch
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import android.app.Notification
+import com.example.comisariatoproyecto.ui.pantallas.ComentariosProducto
+import com.example.comisariatoproyecto.ui.pantallas.OpinarBottomSheet
 
 
 class MainActivity : FragmentActivity() {
@@ -340,6 +342,10 @@ fun AppNavigation() {
                                     }
                                 }
                             },
+                            onVerComentarios = { id ->
+                                nav.navigate("comentariosProducto")
+                            },
+
                             onReservar = { prod, plazo, cant ->
                                 productoSeleccionado          = prod
                                 plazoSeleccionadoReserva      = plazo
@@ -349,7 +355,33 @@ fun AppNavigation() {
                         )
                     }
                 }
+// ── Comentarios de producto ───────────────────────────────────────
+                // ── Comentarios de producto ───────────────────────────────────────
+                composable("comentariosProducto") {
+                    // Usamos el patrón de "let" igual que en detalleProducto
+                    productoSeleccionado?.let { producto ->
+                        var mostrarSheet by remember { mutableStateOf(false) }
 
+                        ComentariosProducto(
+                            productoId = producto.id,
+                            onBack     = { nav.popBackStack() },
+                            onOpinar   = { mostrarSheet = true }
+                        )
+
+                        // El BottomSheet se dispara con el estado local
+                        if (mostrarSheet) {
+                            OpinarBottomSheet(
+                                productoNombre    = producto.nombre,
+                                productoImagenUrl = producto.imagenUrl,
+                                onDismiss         = { mostrarSheet = false },
+                                onEnviar          = { estrellas, comentario ->
+                                    // Aquí irá tu lógica de Firebase en el futuro
+                                    mostrarSheet = false
+                                }
+                            )
+                        }
+                    }
+                }
                 // ── Confirmar reserva ─────────────────────────────────────────
                 composable("confirmarReserva") {
                     productoSeleccionado?.let { producto ->
