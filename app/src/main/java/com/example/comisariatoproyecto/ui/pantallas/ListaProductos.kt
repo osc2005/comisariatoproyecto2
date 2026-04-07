@@ -286,11 +286,13 @@ fun ProductoCard(
                 fontWeight = FontWeight.Normal,
                 color = TextSecondary,
                 maxLines = 2,
+                minLines = 2,
                 overflow = TextOverflow.Ellipsis,
+
                 letterSpacing = 0.5.sp,
                 lineHeight = 16.sp
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
 
             Text(
                 text = "L. " + String.format(java.util.Locale.US, "%,.2f", producto.precioContado),
