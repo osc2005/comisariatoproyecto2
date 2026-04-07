@@ -63,6 +63,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     //
+
+    //iconos 
+
+    implementation("androidx.compose.material:material-icons-extended")
     // Firebase Auth
     implementation("com.google.firebase:firebase-auth")
 

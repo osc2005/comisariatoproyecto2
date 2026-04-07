@@ -9,7 +9,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.StarHalf
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -48,7 +52,8 @@ fun DetalleProducto(
     reservaPendiente: m_Creditos?,
     onBack: () -> Unit,
     onReservar: (m_Productos, Int?, Int) -> Unit,
-    onCancelarReserva: (String) -> Unit
+    onCancelarReserva: (String) -> Unit,
+    onVerComentarios: (String) -> Unit
 ) {
     val cuotas by repoCuotas.obtenerCuotas().collectAsState(initial = emptyList())
 
@@ -60,6 +65,10 @@ fun DetalleProducto(
     var porcentajeCfg by remember { mutableDoubleStateOf(0.0) }
     var utilizadoActual by remember { mutableDoubleStateOf(0.0) }
     var cargandoValidacion by remember { mutableStateOf(true) }
+
+
+    // --- NUEVO ESTADO PARA LISTA DE DESEOS ---
+    var isWishlisted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (empleado != null) {
@@ -261,7 +270,32 @@ fun DetalleProducto(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd) // Esquina superior derecha
+                            .padding(16.dp)
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(50))
+                            // Cambiamos a un negro/gris traslúcido para que resalte en fondos blancos
+                            .background(Color.Black.copy(alpha = 0.3f))
+                            .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(50))
+                            .clickable { isWishlisted = !isWishlisted }
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isWishlisted) Icons.Filled.Favorite
+                            else Icons.Default.FavoriteBorder,
+                            contentDescription = "Lista de deseos",
+                            // El color blanco del icono contrastará perfectamente con el fondo gris
+                            tint = if (isWishlisted) Color.Red else Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
+
+
 
                 // ── Contenido ────────────────────────────────────────────────
                 Column(
@@ -290,7 +324,40 @@ fun DetalleProducto(
                         lineHeight = 28.sp
                     )
                     Spacer(Modifier.height(6.dp))
-
+//EL APARTADO A DEJAR FUNCIONAL PARA LOS COMENTARIOS Y PUNTUACION DEL PRODUCTO
+                    Row(
+                        modifier = Modifier
+                            .wrapContentWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onVerComentarios(producto.id) }
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Estrellas: 4 llenas + 1 mitad (hardcoded por ahora)
+                        repeat(4) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFACC15),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.StarHalf,
+                            contentDescription = null,
+                            tint = Color(0xFFFACC15),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            "(128 opiniones)",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
                     // Descripción
                     Text(
                         producto.descripcion,
