@@ -125,7 +125,7 @@ fun DetalleProducto(
         bottomBar = {
             if (producto != null) {
                 Column {
-                 HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
+                    HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
 
                     Row(
                         modifier = Modifier
@@ -385,7 +385,7 @@ fun DetalleProducto(
 
                                 Column(
                                     modifier = Modifier
-                                        .widthIn(min = 80.dp)          // mínimo 80dp, crece si necesita
+                                        .widthIn(min = 80.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(
                                             if (seleccionado) NavyPrimary.copy(alpha = 0.05f)
@@ -406,19 +406,19 @@ fun DetalleProducto(
                                 ) {
                                     Text(
                                         "$meses meses",
-                                        fontSize = 12.sp,                               // subido de 11 a 12
-                                        fontWeight = FontWeight.Medium,                 // un poco más de peso
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
                                         color = if (seleccionado) NavyPrimary else TextSecondary,
                                         maxLines = 1
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         formatCuota(cuotaMensual),
-                                        fontSize = 13.sp,                               // subido de 12 a 13
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NavyPrimary,
                                         maxLines = 1,
-                                        softWrap = false                                // nunca parte en dos líneas
+                                        softWrap = false
                                     )
 
                                 }

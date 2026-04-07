@@ -266,28 +266,7 @@ fun ConfirmarReserva(
 
             Spacer(Modifier.height(16.dp))
 
-            // Banner Info
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NavyPrimary.copy(alpha = 0.05f))
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(
-                    Icons.Default.Info,
-                    null,
-                    Modifier.size(18.dp),
-                    tint = NavyPrimary.copy(alpha = 0.5f)
-                )
-                Text(
-                    "Tu reserva sera evaluada por un asesor. El estado de tu reserva se mostrara en el inicio.",
-                    fontSize = 12.sp,
-                    color = NavyPrimary.copy(alpha = 0.7f),
-                    lineHeight = 18.sp
-                )
-            }
+
         }
     }
 }
