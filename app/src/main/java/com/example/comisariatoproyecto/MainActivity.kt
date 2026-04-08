@@ -341,6 +341,13 @@ fun AppNavigation() {
             }
 
             composable("detalleProducto") {
+                // ← Refresca reservas al entrar para tener el estado actualizado
+                LaunchedEffect(Unit) {
+                    empleadoCargado?.let { emp ->
+                        reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                    }
+                }
+
                 productoSeleccionado?.let { prod ->
                     DetalleProducto(
                         producto = prod,
