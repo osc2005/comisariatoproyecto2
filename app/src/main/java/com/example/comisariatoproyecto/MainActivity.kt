@@ -378,6 +378,7 @@ fun AppNavigation() {
                             empleadoNombres = empleadoCargado?.nombres ?: "",
                             empleadoApellidos = empleadoCargado?.apellidos ?: "",
                             estrellas = estrellas,
+                            visible = true,
                             comentario = comentario
                         )
                         mostrarSheetOpinar = false
