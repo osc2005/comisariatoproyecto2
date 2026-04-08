@@ -12,5 +12,6 @@ data class m_Reseña(
     val creditoId: String = "",
     val estrellas: Int = 0,
     val comentario: String = "",
+    val visible: Boolean = true,
     val fechaReseña: Timestamp? = null
 )
