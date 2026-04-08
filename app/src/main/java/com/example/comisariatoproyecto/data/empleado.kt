@@ -40,10 +40,12 @@ data class Empleado(
     val estado: String = "",
 
     /** Fecha de registro en Firestore */
-    val fechaRegistro: Timestamp? = null,
+    val fechaInicio: Timestamp? = null,
 
     /** Nombres del empleado */
     val nombres: String = "",
+
+
 
     /**
      * Salario del empleado.
@@ -75,9 +77,10 @@ data class Empleado(
      * Si no hay fecha, retorna "Sin fecha".
      */
     val fechaFormateada: String
-        get() = fechaRegistro?.toDate()?.let {
+        get() = fechaInicio?.toDate()?.let {
             SimpleDateFormat("dd/MM/yyyy", Locale("es", "HN")).format(it)
         } ?: "Sin fecha"
+
 
     /**
      * Indica si el empleado está activo.

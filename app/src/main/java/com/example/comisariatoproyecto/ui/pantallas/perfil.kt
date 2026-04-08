@@ -1,5 +1,6 @@
 package com.example.comisariatoproyecto.ui.pantallas
 
+import android.R.attr.onClick
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -12,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -212,26 +214,20 @@ fun PerfilScreen(
                                     "DNI", empleado?.dni ?: "—")
                                 TarjetaDato(Icons.Outlined.Phone,
                                     "Teléfono", empleado?.telefono ?: "—")
-                                TarjetaDato(Icons.Outlined.CalendarMonth,
-                                    "Fecha de ingreso", empleado?.fechaFormateada ?: "—")
+
+
                             }
 
                             // ── TAB LABORAL ───────────────────────────────────
                             PerfilTab.Laboral -> {
-                                // Stat cards
-                                Row(
-                                    modifier            = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    StatCard(
-                                        modifier = Modifier.weight(1f),
-                                        etiqueta = "Salario mensual",
-                                        valor    = empleado?.salarioFormateado ?: "—"
-                                    )
+                              SeccionLabel("Datos laborales")
+                                TarjetaDato(Icons.Outlined.MonetizationOn,
+                                    "Salario", empleado?.salarioFormateado ?: "—")
+                                TarjetaDato(Icons.Outlined.Work,
+                                    "Departamento", empleado?.departamentoNombre?: "—")
+                                  TarjetaDato(Icons.Outlined.DateRange,
+                                    "Fecha de inicio", empleado?.fechaFormateada ?: "—")
 
-                                }
-
-                                Spacer(Modifier.height(4.dp))
                             }
 
                             // ── TAB CUENTA ────────────────────────────────────
