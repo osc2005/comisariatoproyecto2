@@ -66,7 +66,7 @@ fun ConfirmarReserva(
     val esCredito = plazoMeses != null
     val precioBase = if (esCredito) producto?.precioCredito ?: 0.0 else producto?.precioContado ?: 0.0
     val totalFinal = precioBase * cantidad
-    val cuotaMensual = if (esCredito && (plazoMeses ?: 0) > 0) totalFinal / plazoMeses!! else null
+    val cuotaMensual = if (esCredito && (plazoMeses ?: 0) > 0) totalFinal / plazoMeses!! else totalFinal
 
     // ← NUEVO: Diálogo de éxito
     if (mostrarDialogoExito) {
@@ -145,11 +145,6 @@ fun ConfirmarReserva(
                                 enviando = true
                                 try {
                                     repoCreditos.crearReserva(producto, cantidad, plazoMeses, empleado)
-
-                                    // ← NUEVO: notificación del sistema Android
-
-
-                                    // ← NUEVO: mostrar diálogo de éxito en lugar del Toast
                                     mostrarDialogoExito = true
 
                                 } catch (e: Exception) {

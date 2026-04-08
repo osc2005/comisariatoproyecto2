@@ -29,7 +29,7 @@ class r_Creditos {
         val esCredito = plazoMeses != null
         val precioBase = if (esCredito) producto.precioCredito else producto.precioContado
         val totalCredito = precioBase * cantidad
-        val cuotaMensual = if (esCredito && plazoMeses!! > 0) totalCredito / plazoMeses else 0.0
+        val cuotaMensual = if (esCredito && plazoMeses!! > 0) totalCredito / plazoMeses else totalCredito
 
         val productoRef = db.collection("productos").document(producto.id)
 

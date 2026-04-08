@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.example.comisariatoproyecto.data.m_Categoria
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Productos
+import com.example.comisariatoproyecto.data.r_Reseñas
+import com.example.comisariatoproyecto.ui.componentes.RatingBar
 
 
 
@@ -28,6 +30,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
@@ -47,6 +50,7 @@ import com.example.comisariatoproyecto.ui.theme.TextSecondary
 fun ListaProductos(
     categoria: m_Categoria,
     repo: r_Productos,
+    repoReseñas: r_Reseñas, // ← nuevo
     onBack: () -> Unit,
     onVerDetalle: (m_Productos) -> Unit
 ) {
@@ -54,8 +58,23 @@ fun ListaProductos(
         .obtenerProductosPorCategoria(categoria.id)
         .collectAsState(initial = null)
 
-    var orden by remember { mutableStateOf("ninguno") }
+    var ordenPrecio by remember { mutableStateOf("ninguno") }
+    var mejorValorados by remember { mutableStateOf(false) }
     var buscar by remember { mutableStateOf("") }
+
+    // Estado para guardar los promedios de todos los productos mostrados
+    val promedios = remember { mutableStateMapOf<String, Pair<Double, Int>>() }
+
+    // Cargar promedios masivamente cuando cambian los productos
+    LaunchedEffect(productos) {
+        productos?.let { lista ->
+            val ids = lista.map { it.id }
+            if (ids.isNotEmpty()) {
+                val stats = repoReseñas.obtenerEstadisticasVariosProductos(ids)
+                promedios.putAll(stats)
+            }
+        }
+    }
 
     Scaffold(
         containerColor = SurfaceBase,
@@ -116,8 +135,8 @@ fun ListaProductos(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
-                    selected = orden == "menor_mayor",
-                    onClick = { orden = if (orden == "menor_mayor") "ninguno" else "menor_mayor" },
+                    selected = ordenPrecio == "menor_mayor",
+                    onClick = { ordenPrecio = if (ordenPrecio == "menor_mayor") "ninguno" else "menor_mayor" },
                     label = { Text("Precio más bajo", fontSize = 11.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = NavyPrimary,
@@ -126,9 +145,19 @@ fun ListaProductos(
                 )
 
                 FilterChip(
-                    selected = orden == "mayor_menor",
-                    onClick = { orden = if (orden == "mayor_menor") "ninguno" else "mayor_menor" },
+                    selected = ordenPrecio == "mayor_menor",
+                    onClick = { ordenPrecio = if (ordenPrecio == "mayor_menor") "ninguno" else "mayor_menor" },
                     label = { Text("Precio más alto", fontSize = 11.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = NavyPrimary,
+                        selectedLabelColor = Color.White
+                    )
+                )
+
+                FilterChip(
+                    selected = mejorValorados,
+                    onClick = { mejorValorados = !mejorValorados },
+                    label = { Text("Mejor valorados", fontSize = 11.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = NavyPrimary,
                         selectedLabelColor = Color.White
@@ -166,21 +195,47 @@ fun ListaProductos(
                 else -> {
                     val filtrados = productos!!.filter {
                         it.nombre.contains(buscar, ignoreCase = true)
-                    }.let { lista ->
-                        when (orden) {
-                            "menor_mayor" -> lista.sortedBy { it.precioContado }
-                            "mayor_menor" -> lista.sortedByDescending { it.precioContado }
-                            else -> lista
+                    }.let { listaOriginal ->
+                        // 1. APLICAR FILTRO DINÁMICO (Embudo)
+                        val listaFiltrada = if (mejorValorados) {
+                            val maxPuntaje = promedios.values.maxOfOrNull { it.first } ?: 0.0
+                            // Si el máximo es alto (4-5), mostramos lo max a  4
+                            // Si el máximo es bajo (ej: 3.5), mostramos lo que esté en ese nivel (3+).
+                            val umbral = if (maxPuntaje >= 4.0) 4.0 else Math.floor(maxPuntaje)
+                            
+                            listaOriginal.filter { (promedios[it.id]?.first ?: 0.0) >= umbral && (promedios[it.id]?.second ?: 0) > 0 }
+                        } else {
+                            listaOriginal
                         }
+
+                        // 2. APLICAR ORDENAMIENTO (Acomodo)
+                        listaFiltrada.sortedWith(
+                            when (ordenPrecio) {
+                                "menor_mayor" -> compareBy { it.precioContado }
+                                "mayor_menor" -> compareByDescending { it.precioContado }
+                                else -> compareBy { 0 } // Mantener orden original
+                            }
+                        )
                     }
 
                     if (filtrados.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                "Sin resultados para \"$buscar\"",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Gray
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                                Icon(
+                                    if (mejorValorados) Icons.Default.Star else Icons.Default.Search, 
+                                    null, 
+                                    modifier = Modifier.size(48.dp), 
+                                    tint = Color.LightGray
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    text = if (mejorValorados) "Aún no hay productos destacados con alta calificación aquí." 
+                                           else "No se encontraron resultados para \"$buscar\"",
+                                    textAlign = TextAlign.Center, 
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Gray
+                                )
+                            }
                         }
                     } else {
                         Text(
@@ -200,6 +255,7 @@ fun ListaProductos(
                             items(filtrados, key = { it.id }) { producto ->
                                 ProductoCard(
                                     producto = producto,
+                                    promptStats = promedios[producto.id] ?: Pair(0.0, 0),
                                     onClick = { onVerDetalle(producto) }
                                 )
                             }
@@ -214,6 +270,7 @@ fun ListaProductos(
 @Composable
 fun ProductoCard(
     producto: m_Productos,
+    promptStats: Pair<Double, Int>,
     onClick: () -> Unit
 ) {
     var pressed by remember { mutableStateOf(false) }
@@ -288,11 +345,13 @@ fun ProductoCard(
                 maxLines = 2,
                 minLines = 2,
                 overflow = TextOverflow.Ellipsis,
-
                 letterSpacing = 0.5.sp,
                 lineHeight = 16.sp
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
+
+            RatingBar(promedio = promptStats.first, starSize = 12.dp)
+            Spacer(Modifier.height(4.dp))
 
             Text(
                 text = "L. " + String.format(java.util.Locale.US, "%,.2f", producto.precioContado),

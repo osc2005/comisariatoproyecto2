@@ -279,6 +279,7 @@ fun AppNavigation() {
                 ListaProductos(
                     categoria = m_Categoria(id = cid, nombre = cnom),
                     repo = repoprod,
+                    repoReseñas = repoReseñas,
                     onBack = { nav.popBackStack() },
                     onVerDetalle = { prod ->
                         productoSeleccionado = prod
