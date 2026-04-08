@@ -24,6 +24,7 @@ class r_Reseñas {
         empleadoNombres: String,
         empleadoApellidos: String,
         estrellas: Int,
+        visible: Boolean,
         comentario: String
     ) = withContext(Dispatchers.IO) {
         try {
@@ -44,6 +45,7 @@ class r_Reseñas {
                 "empleadoApellidos" to empleadoApellidos,
                 "creditoId"         to creditoId,
                 "estrellas"         to estrellas,
+                "visible"           to true,
                 "comentario"        to comentario,
                 "fechaReseña"       to Timestamp.now()
             )
@@ -73,6 +75,7 @@ class r_Reseñas {
         callbackFlow {
             val listener = coleccion
                 .whereEqualTo("productoId", productoId)
+                .whereEqualTo("visible", true) //
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         trySend(emptyList())
@@ -137,11 +140,13 @@ class r_Reseñas {
         }
 
     // 6. Promedio y conteo de reseñas de un producto
+    // 6. Promedio y conteo de reseñas de un producto (Solo visibles)
     suspend fun obtenerEstadisticasProducto(productoId: String): Pair<Double, Int> =
         withContext(Dispatchers.IO) {
             try {
                 val resultado = coleccion
                     .whereEqualTo("productoId", productoId)
+                    .whereEqualTo("visible", true)
                     .get()
                     .await()
 
@@ -173,6 +178,7 @@ class r_Reseñas {
                 empleadoApellidos = getString("empleadoApellidos") ?: "",
                 creditoId         = getString("creditoId") ?: "",
                 estrellas         = (getLong("estrellas") ?: 0L).toInt(),
+                visible           = getBoolean("visible") ?: true,
                 comentario        = getString("comentario") ?: "",
                 fechaReseña       = getTimestamp("fechaReseña")
             )
