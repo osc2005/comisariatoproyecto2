@@ -445,7 +445,7 @@ fun AppNavigation() {
                                 try {
                                     repoReseñas.crearReseña(
                                         creditoId = creditoParaOpinar!!.id,
-                                        productoId = "", // Podrías guardarlo si lo tuvieras en m_CreditoDetalle
+                                        productoId = creditoParaOpinar!!.productoId,
                                         productoNombre = creditoParaOpinar!!.productoNombre,
                                         empleadoId = empleadoCargado?.codigoEmpleado ?: "",
                                         empleadoNombres = empleadoCargado?.nombres ?: "",
