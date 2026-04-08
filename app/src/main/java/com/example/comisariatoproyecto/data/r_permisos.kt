@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+
 class r_permisos {
 
     private val auth = FirebaseAuth.getInstance()
@@ -17,27 +18,54 @@ class r_permisos {
     }
 
     // ─── LOGIN CON FIREBASE AUTH ────────────────────────────────────────────
-    suspend fun login(email: String, password: String): Boolean {
-        return try {
-            auth.signInWithEmailAndPassword(email, password).await()
-            Log.d(TAG, "Login OK uid=${auth.currentUser?.uid}")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Login FAILED tipo=${e.javaClass.simpleName} mensaje=${e.message}")
-            false
+    // ─── LOGIN CON FIREBASE AUTH (Retorna mensaje de error o null si es exitoso) ───
+// ─── LOGIN CON FIREBASE AUTH + VERIFICACIÓN DE ESTADO ──────────────────────
+    suspend fun login(email: String, password: String): LoginResult {
+        return withContext(Dispatchers.IO) {
+            try {
+                auth.signInWithEmailAndPassword(email, password).await()
+
+                val estaActivo = verificarEstadoUsuario(email.trim())
+                if (!estaActivo) {
+                    auth.signOut()
+                    Log.w(TAG, "Usuario inactivo bloqueado: $email")
+                    return@withContext LoginResult.inactivo
+                }
+
+                Log.d(TAG, "Login OK uid=${auth.currentUser?.uid}")
+                LoginResult.activo
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Login FAILED: ${e.javaClass.simpleName} → ${e.message}")
+                LoginResult.ERROR_CREDENCIALES
+            }
         }
     }
 
-    // ─── LOGIN SILENCIOSO PARA BIOMETRÍA ────────────────────────────────────
-    suspend fun loginSilencioso(email: String, password: String): Boolean {
-        return try {
-            if (email.isEmpty() || password.isEmpty()) return false
-            auth.signInWithEmailAndPassword(email, password).await()
-            Log.d(TAG, "loginSilencioso OK")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "loginSilencioso ERROR: ${e.message}")
-            false
+    // ─── LOGIN SILENCIOSO PARA BIOMETRÍA + VERIFICACIÓN DE ESTADO ───────────────
+    suspend fun loginSilencioso(email: String, password: String): LoginResult {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (email.isEmpty() || password.isEmpty()) {
+                    return@withContext LoginResult.ERROR_CREDENCIALES
+                }
+
+                auth.signInWithEmailAndPassword(email, password).await()
+
+                val estaActivo = verificarEstadoUsuario(email.trim())
+                if (!estaActivo) {
+                    auth.signOut()
+                    Log.w(TAG, "Usuario inactivo bloqueado en biometría: $email")
+                    return@withContext LoginResult.inactivo
+                }
+
+                Log.d(TAG, "loginSilencioso OK uid=${auth.currentUser?.uid}")
+                LoginResult.activo
+
+            } catch (e: Exception) {
+                Log.e(TAG, "loginSilencioso ERROR: ${e.message}")
+                LoginResult.ERROR_CREDENCIALES
+            }
         }
     }
 
@@ -190,5 +218,30 @@ class r_permisos {
             }
         }
     }
+
+    private suspend fun verificarEstadoUsuario(email: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val snap = db.collection("usuarios")
+                    .whereEqualTo("correo", email)
+                    .get()
+                    .await()
+
+                if (snap.isEmpty) {
+                    Log.w(TAG, "No se encontró usuario en Firestore para $email")
+                    return@withContext false
+                }
+
+                val estado = snap.documents.first().getString("estado") ?: "inactivo"
+                Log.d(TAG, "Estado del usuario $email: $estado")
+                estado.lowercase().trim() == "activo"
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error verificando estado: ${e.message}")
+                false
+            }
+        }
+    }
+
 
 }

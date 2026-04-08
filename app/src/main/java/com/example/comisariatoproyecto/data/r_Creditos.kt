@@ -198,12 +198,12 @@ class r_Creditos {
 
                 snap.documents.mapNotNull { doc ->
                     val estado = doc.getString("estado") ?: return@mapNotNull null
-                    if (estado != "Aprobado" && estado != "Rechazado") return@mapNotNull null
+                 if (estado != "Aprobado" && estado != "Rechazado") return@mapNotNull null
 
                     NotificacionReserva(
                         id             = doc.id,
                         productoNombre = doc.getString("productoNombre") ?: "Producto",
-                        estado         = estado
+                        estado         = estado,
                     )
                 }
             } catch (e: Exception) {
