@@ -132,9 +132,11 @@ class r_Creditos {
             .await()
             .documents.map { doc ->
                 m_Creditos(
-                    id = doc.id,
-                    estado = doc.getString("estado") ?: "",
-                    productoId = doc.getString("productoId") ?: ""
+                    id             = doc.id,
+                    estado         = doc.getString("estado") ?: "",
+                    productoId     = doc.getString("productoId") ?: "",
+                    productoNombre = doc.getString("productoNombre") ?: "",  // ← agregar
+                    productoImgUrl = doc.getString("productoImgUrl") ?: ""   // ← agregar
                 )
             }
     }

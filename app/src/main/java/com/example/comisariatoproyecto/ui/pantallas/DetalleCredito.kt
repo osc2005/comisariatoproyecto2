@@ -34,6 +34,7 @@ import java.util.Locale
 @Composable
 fun PantallaDetalleCredito(
     credito: m_CreditoDetalle,
+    empleadoId: String,
     onBack: () -> Unit,
     onOpinar: () -> Unit = {}
 ) {
@@ -44,9 +45,8 @@ fun PantallaDetalleCredito(
     var mostrarDialogoCancelar by remember { mutableStateOf(false) }
     var cancelando             by remember { mutableStateOf(false) }
     var errorMsg               by remember { mutableStateOf<String?>(null) }
-    
-    val miReseña by repoReseñas.obtenerReseñaDeCredito(credito.id).collectAsState(initial = null)
 
+    val miReseña by repoReseñas.obtenerReseñaDeCredito(credito.id).collectAsState(initial = null)
     val esPagado = credito.estado == "Pagado"
 
     val progreso = if (esPagado) 1f else if (credito.plazoCuotas > 0)

@@ -42,4 +42,18 @@ class r_Productos {
             }
         awaitClose { listener.remove() }
     }
+
+
+    suspend fun obtenerProductoPorId(productoId: String): m_Productos? {
+        return try {
+            val doc = db.collection("productos")
+                .document(productoId)
+                .get()
+                .await()
+            doc.toObject(m_Productos::class.java)?.copy(id = doc.id)
+        } catch (e: Exception) {
+            Log.e("r_Productos", "Error obteniendo producto por id: ${e.message}")
+            null
+        }
+    }
 }

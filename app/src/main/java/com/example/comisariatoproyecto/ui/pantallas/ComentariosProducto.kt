@@ -67,17 +67,18 @@ fun ComentariosProducto(
             .obtenerReservasDeEmpleado(empleadoId)
             .filter { it.productoId == productoId && it.estado == "Aprobado" }
 
-        // Buscamos el primer crédito aprobado que aún no tenga reseña asociada
         var idEncontrado: String? = null
         for (credito in creditosAprobados) {
-            if (!repoReseñas.creditoYaTieneReseña(credito.id)) {
+            val yaExiste = repoReseñas.creditoYaTieneReseña(credito.id)
+            android.util.Log.d("DEBUG_OPINAR", "creditoId=${credito.id} yaExiste=$yaExiste")
+            if (!yaExiste) {
                 idEncontrado = credito.id
                 break
             }
         }
         creditoHabilitador = idEncontrado
+        android.util.Log.d("DEBUG_OPINAR", "creditoHabilitador=$creditoHabilitador")
     }
-
     val ITEMS_POR_PAGINA = 3
     val totalPaginas     = maxOf(1, ceil(reseñas.size / ITEMS_POR_PAGINA.toDouble()).toInt())
     var paginaActual     by remember { mutableIntStateOf(1) }

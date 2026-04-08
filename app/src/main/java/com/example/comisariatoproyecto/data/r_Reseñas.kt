@@ -57,8 +57,20 @@ class r_Reseñas {
         }
     }
 
+    fun obtenerReseñaDeProductoPorEmpleado(productoId: String, empleadoId: String): Flow<m_Reseña?> =
+        callbackFlow {
+            val listener = coleccion
+                .whereEqualTo("productoId", productoId)
+                .whereEqualTo("empleadoId", empleadoId)
+                .limit(1)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) { trySend(null); return@addSnapshotListener }
+                    trySend(snapshot?.documents?.firstOrNull()?.toReseña())
+                }
+            awaitClose { listener.remove() }
+        }
 
-    // 2. Reseñas de un producto en tiempo real (Solo visibles)
+    //  2. Reseñas de un producto en tiempo real
     fun obtenerReseñasDeProducto(productoId: String): Flow<List<m_Reseña>> =
         callbackFlow {
             val listener = coleccion
