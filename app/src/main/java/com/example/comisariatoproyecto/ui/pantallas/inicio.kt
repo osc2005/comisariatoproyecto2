@@ -46,7 +46,6 @@ import androidx.compose.ui.window.Dialog
 
 // 🔹 App
 import com.example.comisariatoproyecto.MainActivity
-import com.example.comisariatoproyecto.mostrarNotificacion
 
 // 🔹 Data
 import com.example.comisariatoproyecto.data.Empleado
@@ -119,7 +118,6 @@ fun PantallaInicio(
                 activity?.let { act ->
                     val titulo  = if (notif.estado == "Aprobado") "Reserva aprobada" else "Reserva rechazada"
                     val mensaje = "Tu reserva de \"${notif.productoNombre}\" fue ${notif.estado.lowercase()}."
-                    mostrarNotificacion(act, titulo, mensaje)
                 }
             }
             if (paraNotificar.isNotEmpty()) {

@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.comisariatoproyecto.MainActivity       // ← NUEVO
-import com.example.comisariatoproyecto.mostrarNotificacion // ← NUEVO
+
 import com.example.comisariatoproyecto.data.Empleado
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Creditos
@@ -147,16 +147,7 @@ fun ConfirmarReserva(
                                     repoCreditos.crearReserva(producto, cantidad, plazoMeses, empleado)
 
                                     // ← NUEVO: notificación del sistema Android
-                                    activity?.let {
-                                        mostrarNotificacion(
-                                            it,
-                                            "¡Reserva enviada!",
-                                            if (esCredito)
-                                                "Tu solicitud de crédito para \"${producto.nombre}\" está en revisión."
-                                            else
-                                                "Tu reserva de \"${producto.nombre}\" está en revisión."
-                                        )
-                                    }
+
 
                                     // ← NUEVO: mostrar diálogo de éxito en lugar del Toast
                                     mostrarDialogoExito = true

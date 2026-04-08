@@ -64,11 +64,7 @@ fun DetalleProducto(
 ) {
     val cuotas by repoCuotas.obtenerCuotas().collectAsState(initial = emptyList())
 
-    var cantidad           by remember { mutableIntStateOf(1) }
-    var modoCredito        by remember { mutableStateOf(true) }
-    var plazoSeleccionado  by remember { mutableStateOf<m_CuotaCredito?>(null) }
-    var porcentajeCfg      by remember { mutableDoubleStateOf(0.0) }
-    var utilizadoActual    by remember { mutableDoubleStateOf(0.0) }
+
     // --- CARGAR PUNTUACIÓN REAL ---
     val reseñas by if (producto != null) {
         repoReseñas.obtenerReseñasDeProducto(producto.id).collectAsState(initial = emptyList())
