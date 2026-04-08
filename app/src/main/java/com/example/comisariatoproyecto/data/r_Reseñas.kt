@@ -141,29 +141,39 @@ class r_Reseñas {
 
     // 6. Promedio y conteo de reseñas de un producto
     // 6. Promedio y conteo de reseñas de un producto (Solo visibles)
-    suspend fun obtenerEstadisticasProducto(productoId: String): Pair<Double, Int> =
+    suspend fun obtenerEstadisticasVariosProductos(productoIds: List<String>): Map<String, Pair<Double, Int>> =
         withContext(Dispatchers.IO) {
             try {
-                val resultado = coleccion
-                    .whereEqualTo("productoId", productoId)
-                    .whereEqualTo("visible", true)
-                    .get()
-                    .await()
+                if (productoIds.isEmpty()) return@withContext emptyMap()
+                
+                // Firestore limit for whereIn is 30. Chunking if necessary.
+                val chunks = productoIds.chunked(30)
+                val resultadosMap = mutableMapOf<String, Pair<Double, Int>>()
 
-                val total = resultado.size()
-                if (total == 0) return@withContext Pair(0.0, 0)
+                for (chunk in chunks) {
+                    val resultado = coleccion
+                        .whereIn("productoId", chunk)
+                        .whereEqualTo("visible", true)
+                        .get()
+                        .await()
 
-                val sumaEstrellas = resultado.documents.sumOf { doc ->
-                    (doc.getLong("estrellas") ?: 0L).toInt()
+                    val reviewsByProduct = resultado.documents.groupBy { it.getString("productoId") ?: "" }
+                    
+                    for (prodId in chunk) {
+                        val docs = reviewsByProduct[prodId] ?: emptyList()
+                        val total = docs.size
+                        if (total == 0) {
+                            resultadosMap[prodId] = Pair(0.0, 0)
+                        } else {
+                            val suma = docs.sumOf { (it.getLong("estrellas") ?: 0L).toInt() }
+                            val promedio = Math.round((suma.toDouble() / total) * 10) / 10.0
+                            resultadosMap[prodId] = Pair(promedio, total)
+                        }
+                    }
                 }
-
-                val promedio = sumaEstrellas.toDouble() / total
-                val promedioDosDecimales = Math.round(promedio * 10) / 10.0
-
-                Pair(promedioDosDecimales, total)
-
+                resultadosMap
             } catch (e: Exception) {
-                Pair(0.0, 0)
+                emptyMap()
             }
         }
 

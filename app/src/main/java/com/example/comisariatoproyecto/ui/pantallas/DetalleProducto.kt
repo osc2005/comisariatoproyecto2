@@ -36,7 +36,7 @@ import com.example.comisariatoproyecto.data.r_Creditos
 import com.example.comisariatoproyecto.data.r_CuotaCredito
 import com.example.comisariatoproyecto.data.r_Wishlist
 import com.example.comisariatoproyecto.data.r_Reseñas
-
+import com.example.comisariatoproyecto.ui.componentes.RatingBar
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.ui.theme.NavyContainer
 import com.example.comisariatoproyecto.ui.theme.SurfaceBase
@@ -335,33 +335,12 @@ fun DetalleProducto(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val estrellasLlenas = promedio.toInt()
-                        val mediaEstrella   = (promedio - estrellasLlenas) >= 0.5
-
-                        repeat(5) { index ->
-                            when {
-                                index < estrellasLlenas -> Icon(
-                                    Icons.Filled.Star, null,
-                                    tint = YellowStars,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                index == estrellasLlenas && mediaEstrella -> Icon(
-                                    Icons.AutoMirrored.Filled.StarHalf, null,
-                                    tint = YellowStars,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                else -> Icon(
-                                    Icons.Filled.StarOutline, null,
-                                    tint = TextSecondary.copy(alpha = 0.2f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
+                        RatingBar(promedio = promedio, starSize = 18.dp, mostrarTexto = false)
 
                         Spacer(Modifier.width(2.dp))
                         Text(
-                            if (totalReseñas == 0) "Sin opiniones"
-                            else "($totalReseñas ${if (totalReseñas == 1) "opinión" else "opiniones"})",
+                            text = if (totalReseñas == 0) "Sin opiniones"
+                            else "$promedio ($totalReseñas ${if (totalReseñas == 1) "opinión" else "opiniones"})",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextSecondary

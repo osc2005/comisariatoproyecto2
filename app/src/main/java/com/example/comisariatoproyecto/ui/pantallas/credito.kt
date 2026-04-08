@@ -106,8 +106,9 @@ fun PantallaCredito(
             compareBy<m_CreditoDetalle> {
                 when {
                     it.estadoCredito == "Activo" -> 0
-                    it.estado == "Pendiente"     -> 1
-                    else                         -> 2
+                    it.estado == "Aprobado"      -> 1
+                    it.estado == "Pendiente"     -> 2
+                    else                         -> 3
                 }
             }.thenByDescending { it.fechaRegistro }
         )
@@ -308,7 +309,7 @@ fun AccionRapidaCredito(credito: m_CreditoDetalle, pagadoTotal: Boolean) {
         pagadoTotal -> Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.TaskAlt, null, tint = Color(0xFF3B82F6), modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(4.dp))
-            Text("• TOTALMENTE CANCELADO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3B82F6))
+            Text("PAGADO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3B82F6))
         }
         credito.estado == "Aprobado" -> Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -318,7 +319,7 @@ fun AccionRapidaCredito(credito: m_CreditoDetalle, pagadoTotal: Boolean) {
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                if (credito.estadoCredito == "Activo") "• CRÉDITO ACTIVO" else "• CRÉDITO INACTIVO",
+                if (credito.estadoCredito == "Activo") "CRÉDITO ACTIVO" else "CRÉDITO INACTIVO",
                 fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                 color = if (credito.estadoCredito == "Activo") GreenPrimary else TextSecondary
             )
