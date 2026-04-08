@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -34,12 +35,15 @@ import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Creditos
 import com.example.comisariatoproyecto.data.r_CuotaCredito
 import com.example.comisariatoproyecto.data.r_Wishlist
+import com.example.comisariatoproyecto.data.r_Reseñas
+
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.ui.theme.NavyContainer
 import com.example.comisariatoproyecto.ui.theme.SurfaceBase
 import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
 import com.example.comisariatoproyecto.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
+import com.example.comisariatoproyecto.ui.theme.YellowStars
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -50,6 +54,7 @@ fun DetalleProducto(
     repoCuotas: r_CuotaCredito,
     repoCreditos: r_Creditos,
     repoWishlist: r_Wishlist,          // ← nuevo parámetro
+    repoReseñas: r_Reseñas, // Añadido para obtener puntuación real
     empleado: Empleado?,
     reservaPendiente: m_Creditos?,
     onBack: () -> Unit,
@@ -64,6 +69,26 @@ fun DetalleProducto(
     var plazoSeleccionado  by remember { mutableStateOf<m_CuotaCredito?>(null) }
     var porcentajeCfg      by remember { mutableDoubleStateOf(0.0) }
     var utilizadoActual    by remember { mutableDoubleStateOf(0.0) }
+    // --- CARGAR PUNTUACIÓN REAL ---
+    val reseñas by if (producto != null) {
+        repoReseñas.obtenerReseñasDeProducto(producto.id).collectAsState(initial = emptyList())
+    } else {
+        remember { mutableStateOf(emptyList()) }
+    }
+
+    val totalReseñas = reseñas.size
+    val promedio = if (reseñas.isNotEmpty()) {
+        val avg = reseñas.map { it.estrellas }.average()
+        Math.round(avg * 10) / 10.0
+    } else 0.0
+
+    var cantidad by remember { mutableIntStateOf(1) }
+    var modoCredito by remember { mutableStateOf(true) }
+    var plazoSeleccionado by remember { mutableStateOf<m_CuotaCredito?>(null) }
+
+
+    var porcentajeCfg by remember { mutableDoubleStateOf(0.0) }
+    var utilizadoActual by remember { mutableDoubleStateOf(0.0) }
     var cargandoValidacion by remember { mutableStateOf(true) }
 
     // ── Wishlist: observamos en tiempo real si este producto ya está guardado ──
@@ -304,7 +329,7 @@ fun DetalleProducto(
                     )
                     Spacer(Modifier.height(6.dp))
 
-                    // Estrellas / comentarios
+                    // --- PUNTUACIÓN REAL ---
                     Row(
                         modifier = Modifier
                             .wrapContentWidth()
@@ -314,15 +339,37 @@ fun DetalleProducto(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        repeat(4) {
-                            Icon(Icons.Filled.Star, null,
-                                tint = Color(0xFFFACC15), modifier = Modifier.size(18.dp))
+                        val estrellasLlenas = promedio.toInt()
+                        val mediaEstrella   = (promedio - estrellasLlenas) >= 0.5
+
+                        repeat(5) { index ->
+                            when {
+                                index < estrellasLlenas -> Icon(
+                                    Icons.Filled.Star, null,
+                                    tint = YellowStars,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                index == estrellasLlenas && mediaEstrella -> Icon(
+                                    Icons.AutoMirrored.Filled.StarHalf, null,
+                                    tint = YellowStars,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                else -> Icon(
+                                    Icons.Filled.StarOutline, null,
+                                    tint = TextSecondary.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
-                        Icon(Icons.AutoMirrored.Filled.StarHalf, null,
-                            tint = Color(0xFFFACC15), modifier = Modifier.size(18.dp))
+
                         Spacer(Modifier.width(2.dp))
-                        Text("(128 opiniones)", fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium, color = TextSecondary)
+                        Text(
+                            if (totalReseñas == 0) "Sin opiniones"
+                            else "($totalReseñas ${if (totalReseñas == 1) "opinión" else "opiniones"})",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary
+                        )
                     }
                     Spacer(Modifier.height(6.dp))
 

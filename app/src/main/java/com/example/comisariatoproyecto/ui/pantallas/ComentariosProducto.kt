@@ -23,8 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.comisariatoproyecto.data.r_Creditos
+import com.example.comisariatoproyecto.data.r_Reseñas
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.ui.theme.SurfaceBase
 import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
@@ -37,40 +40,59 @@ import kotlin.math.ceil
 @Composable
 fun ComentariosProducto(
     productoId: String,
+    empleadoId: String,
+    repoReseñas: r_Reseñas,
+    repoCreditos: r_Creditos,
     onBack: () -> Unit,
-    onOpinar: () -> Unit = {}
+    onOpinar: (creditoId: String) -> Unit
 ) {
-    data class Resena(
-        val nombre: String,
-        val estrellas: Int,
-        val fecha: String,
-        val comentario: String
-    )
-//PARA MOSTRAR EL MODAL PARA DEJAR LA OPINION
-    var mostrarOpinar by remember { mutableStateOf(false) }
+    // 1. Obtenemos las reseñas en tiempo real desde Firebase
+    val reseñas by repoReseñas
+        .obtenerReseñasDeProducto(productoId)
+        .collectAsState(initial = emptyList())
 
+    // 2. Estadísticas calculadas dinámicamente
+    val totalReseñas = reseñas.size
+    val promedio = if (reseñas.isNotEmpty()) {
+        val avg = reseñas.map { it.estrellas }.average()
+        Math.round(avg * 10) / 10.0
+    } else 0.0
 
-    // Datos de ejemplo (Luego podrías traerlos de Firebase usando el productoId)
-    val resenas = listOf(
-        Resena("Andrés García",    5, "15 Mar 2026", "Excelente equipo, la batería dura muchísimo y el trámite de crédito fue muy rápido."),
-        Resena("María Bustamante", 4, "10 Mar 2026", "Muy buen producto, cumple con lo que promete. La entrega fue puntual."),
-        Resena("Carlos Ramos",     5, "02 Mar 2026", "Increíble relación precio-calidad. Lo recomiendo ampliamente a mis compañeros."),
-        Resena("Luisa Peralta",    3, "25 Feb 2026", "Bueno en general, aunque esperaba un poco más de rendimiento en aplicaciones pesadas."),
-        Resena("Roberto Mejía",    5, "18 Feb 2026", "El proceso de reserva fue súper fácil. Feliz con mi compra."),
-        Resena("Diana Flores",     4, "12 Feb 2026", "Bonito diseño y muy rápido. El crédito se aprobó en minutos."),
-        Resena("José Morales",     5, "05 Feb 2026", "Sin duda lo mejor que he comprado en el comisariato. Muy recomendado.")
-    )
-
-    val ITEMS_POR_PAGINA = 3
-    val totalPaginas = ceil(resenas.size / ITEMS_POR_PAGINA.toDouble()).toInt()
-
-    var paginaActual by remember { mutableIntStateOf(1) }
-    val scrollState = rememberScrollState()
+    var creditoHabilitador by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    val resenasPagina = resenas
+    // 3. Lógica de validación: Solo compradores con crédito APROBADO pueden opinar
+    LaunchedEffect(productoId, empleadoId, reseñas.size) {
+        val creditosAprobados = repoCreditos
+            .obtenerReservasDeEmpleado(empleadoId)
+            .filter { it.productoId == productoId && it.estado == "Aprobado" }
+
+        // Buscamos el primer crédito aprobado que aún no tenga reseña asociada
+        var idEncontrado: String? = null
+        for (credito in creditosAprobados) {
+            if (!repoReseñas.creditoYaTieneReseña(credito.id)) {
+                idEncontrado = credito.id
+                break
+            }
+        }
+        creditoHabilitador = idEncontrado
+    }
+
+    val ITEMS_POR_PAGINA = 3
+    val totalPaginas     = maxOf(1, ceil(reseñas.size / ITEMS_POR_PAGINA.toDouble()).toInt())
+    var paginaActual     by remember { mutableIntStateOf(1) }
+    val scrollState      = rememberScrollState()
+
+    LaunchedEffect(reseñas.size) {
+        if (paginaActual > totalPaginas) paginaActual = 1
+    }
+
+    val reseñasPagina = reseñas
         .drop((paginaActual - 1) * ITEMS_POR_PAGINA)
         .take(ITEMS_POR_PAGINA)
+
+    val estrellasLlenas = promedio.toInt()
+    val mediaEstrella   = (promedio - estrellasLlenas) >= 0.5
 
     Scaffold(
         containerColor = SurfaceBase,
@@ -93,7 +115,7 @@ fun ComentariosProducto(
                 .verticalScroll(scrollState)
         ) {
 
-            // ── Hero de calificación ─────────────────────────────────────
+            // Hero de calificación real
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,28 +129,32 @@ fun ComentariosProducto(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        "4.6",
+                        if (totalReseñas == 0) "—" else String.format("%.1f", promedio),
                         fontSize = 48.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = NavyPrimary,
                         lineHeight = 52.sp
                     )
-                    Text(
-                        "/ 5",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    repeat(4) {
-                        Icon(Icons.Filled.Star, null, tint = YellowStars, modifier = Modifier.size(24.dp))
+                    if (totalReseñas > 0) {
+                        Text("/ 5", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = TextSecondary, modifier = Modifier.padding(bottom = 8.dp))
                     }
-                    Icon(Icons.AutoMirrored.Filled.StarHalf, null, tint = YellowStars, modifier = Modifier.size(24.dp))
                 }
+
+                if (totalReseñas > 0) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        repeat(5) { index ->
+                            when {
+                                index < estrellasLlenas -> Icon(Icons.Filled.Star, null, tint = YellowStars, modifier = Modifier.size(24.dp))
+                                index == estrellasLlenas && mediaEstrella -> Icon(Icons.AutoMirrored.Filled.StarHalf, null, tint = YellowStars, modifier = Modifier.size(24.dp))
+                                else -> Icon(Icons.Filled.StarOutline, null, tint = TextSecondary.copy(alpha = 0.3f), modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    }
+                }
+
                 Text(
-                    "${resenas.size} comentarios",
+                    if (totalReseñas == 0) "Sin opiniones aún"
+                    else "$totalReseñas ${if (totalReseñas == 1) "opinión" else "opiniones"}",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextSecondary
@@ -137,206 +163,111 @@ fun ComentariosProducto(
 
             HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
 
-            // ── Card: ¿Qué te pareció? ───────────────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(SurfaceWhite)
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("¿Qué te pareció el producto?", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = NavyPrimary)
-                    Text("Tu opinión ayuda a otros miembros.", fontSize = 12.sp, color = TextSecondary)
-                }
-                Button(
-                    onClick = onOpinar,
-                    shape = RoundedCornerShape(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+            // BOTÓN OPINAR: Solo si tiene una compra aprobada sin reseña
+            if (creditoHabilitador != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceWhite)
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Opinar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("¿Qué te pareció el producto?", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = NavyPrimary)
+                    Button(
+                        onClick = { onOpinar(creditoHabilitador!!) },
+                        shape = RoundedCornerShape(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = NavyPrimary,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                    ) {
+                        Text("Opinar", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
+                HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
             }
 
-            HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
             Spacer(Modifier.height(8.dp))
 
-            // ── Lista de reseñas (página actual) ─────────────────────────
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                resenasPagina.forEach { resena ->
-                    ResenaCard(resena.nombre, resena.estrellas, resena.fecha, resena.comentario)
+            if (reseñas.isEmpty()) {
+                Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                    Text("Aún no hay opiniones para este producto.", fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
                 }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // ── Paginación ───────────────────────────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Botón anterior
-                IconButton(
-                    onClick = {
-                        paginaActual--
-                        scope.launch { scrollState.animateScrollTo(0) }
-                    },
-                    enabled = paginaActual > 1,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (paginaActual > 1) NavyPrimary.copy(alpha = 0.08f)
-                            else Color.Transparent
-                        )
-                ) {
-                    Icon(
-                        Icons.Default.ChevronLeft,
-                        contentDescription = "Página anterior",
-                        tint = if (paginaActual > 1) NavyPrimary else TextSecondary.copy(alpha = 0.3f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                // Números de página
-                repeat(totalPaginas) { index ->
-                    val pagina = index + 1
-                    val esActiva = pagina == paginaActual
-
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (esActiva) NavyPrimary else Color.Transparent)
-                            .border(
-                                width = if (esActiva) 0.dp else 1.dp,
-                                color = if (esActiva) Color.Transparent else NavyPrimary.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .clickable(enabled = !esActiva) {
-                                paginaActual = pagina
-                                scope.launch { scrollState.animateScrollTo(0) }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "$pagina",
-                            fontSize = 13.sp,
-                            fontWeight = if (esActiva) FontWeight.Bold else FontWeight.Medium,
-                            color = if (esActiva) Color.White else TextSecondary
+            } else {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    reseñasPagina.forEach { reseña ->
+                        ResenaCard(
+                            nombre     = "${reseña.empleadoNombres} ${reseña.empleadoApellidos}",
+                            estrellas  = reseña.estrellas,
+                            fecha      = reseña.fechaReseña?.toDate()?.let {
+                                java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale("es")).format(it)
+                            } ?: "",
+                            comentario = reseña.comentario
                         )
                     }
-
-                    if (index < totalPaginas - 1) Spacer(Modifier.width(4.dp))
                 }
 
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Botón siguiente
-                IconButton(
-                    onClick = {
-                        paginaActual++
-                        scope.launch { scrollState.animateScrollTo(0) }
-                    },
-                    enabled = paginaActual < totalPaginas,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (paginaActual < totalPaginas) NavyPrimary.copy(alpha = 0.08f)
-                            else Color.Transparent
-                        )
-                ) {
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = "Página siguiente",
-                        tint = if (paginaActual < totalPaginas) NavyPrimary else TextSecondary.copy(alpha = 0.3f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                if (totalPaginas > 1) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                paginaActual--
+                                scope.launch { scrollState.scrollTo(0) }
+                            },
+                            enabled = paginaActual > 1,
+                            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(if (paginaActual > 1) NavyPrimary.copy(alpha = 0.08f) else Color.Transparent)
+                        ) {
+                            Icon(Icons.Default.ChevronLeft, "Anterior", tint = if (paginaActual > 1) NavyPrimary else TextSecondary.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        repeat(totalPaginas) { index ->
+                            val pagina = index + 1
+                            val activa = pagina == paginaActual
+                            Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(if (activa) NavyPrimary else Color.Transparent).border(1.dp, if (activa) Color.Transparent else NavyPrimary.copy(alpha = 0.15f), RoundedCornerShape(8.dp)).clickable(enabled = !activa) {
+                                paginaActual = pagina
+                                scope.launch { scrollState.scrollTo(0) }
+                            }, contentAlignment = Alignment.Center) {
+                                Text("$pagina", fontSize = 13.sp, fontWeight = if (activa) FontWeight.Bold else FontWeight.Medium, color = if (activa) Color.White else TextSecondary)
+                            }
+                            if (index < totalPaginas - 1) Spacer(Modifier.width(4.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(
+                            onClick = {
+                                paginaActual++
+                                scope.launch { scrollState.scrollTo(0) }
+                            },
+                            enabled = paginaActual < totalPaginas,
+                            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(if (paginaActual < totalPaginas) NavyPrimary.copy(alpha = 0.08f) else Color.Transparent)
+                        ) {
+                            Icon(Icons.Default.ChevronRight, "Siguiente", tint = if (paginaActual < totalPaginas) NavyPrimary else TextSecondary.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
+                        }
+                    }
                 }
             }
-
             Spacer(Modifier.height(24.dp))
         }
-
-        //dejar esto funcionall.....
-//        if (mostrarOpinar) {
-//            OpinarBottomSheet(
-//                productoNombre    = productoNombre,     // pásalo como parámetro
-//                productoImagenUrl = productoImagenUrl,  // pásalo como parámetro
-//                onDismiss = { mostrarOpinar = false },
-//                onEnviar  = { estrellas, texto ->
-//                    // lógica pendiente
-//                    mostrarOpinar = false
-//                }
-//            )
-//        }
     }
 }
 
 @Composable
-private fun ResenaCard(
-    nombre: String,
-    estrellas: Int,
-    fecha: String,
-    comentario: String
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceWhite)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    nombre,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = NavyPrimary
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    repeat(5) { index ->
-                        Icon(
-                            imageVector = if (index < estrellas) Icons.Filled.Star else Icons.Filled.StarOutline,
-                            contentDescription = null,
-                            tint = if (index < estrellas) YellowStars else TextSecondary.copy(alpha = 0.3f),
-                            modifier = Modifier.size(13.dp)
-                        )
-                    }
-                }
+fun ResenaCard(nombre: String, estrellas: Int, fecha: String, comentario: String) {
+    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(SurfaceWhite).border(1.dp, NavyPrimary.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(nombre, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NavyPrimary)
+                Text(fecha, fontSize = 11.sp, color = TextSecondary)
             }
-            Text(
-                fecha.uppercase(),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextSecondary.copy(alpha = 0.6f),
-                letterSpacing = 0.5.sp
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                repeat(5) { index -> Icon(if (index < estrellas) Icons.Filled.Star else Icons.Filled.StarOutline, null, tint = if (index < estrellas) YellowStars else TextSecondary.copy(alpha = 0.2f), modifier = Modifier.size(16.dp)) }
+            }
         }
-        Text(
-            comentario,
-            fontSize = 13.sp,
-            color = TextSecondary,
-            lineHeight = 20.sp
-        )
+        if (comentario.isNotBlank()) {
+            Text(comentario, fontSize = 13.sp, color = NavyPrimary.copy(alpha = 0.8f), lineHeight = 18.sp)
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.google.firebase.Timestamp
 // colección: creditos
 data class m_CreditoDetalle(
     val id: String = "",
+    val productoId: String = "",
     val productoNombre: String = "",       // campo: productoNombre
     val productoImgUrl: String = "",       // campo: productoImgUrl
     val cantidad: Int = 0,                 // campo: cantidad

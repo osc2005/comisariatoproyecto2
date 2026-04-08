@@ -163,6 +163,7 @@ class r_Creditos {
 
                             m_CreditoDetalle(
                                 id             = doc.id,
+                                productoId     = doc.getString("productoId") ?: "",
                                 productoNombre = doc.getString("productoNombre") ?: "",
                                 productoImgUrl = doc.getString("productoImgUrl") ?: "",
                                 cantidad       = doc.getLong("cantidad")?.toInt() ?: 0,
