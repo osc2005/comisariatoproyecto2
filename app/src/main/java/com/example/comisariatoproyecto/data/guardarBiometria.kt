@@ -126,5 +126,18 @@ class SessionPrefs(context: Context) {
         return prefs.getStringSet("ids_leidos", emptySet()) ?: emptySet()
     }
 
+    fun cerrarSesionPorInactividad() {
+        prefs.edit()
+            .putBoolean("sesion_activa", false)  // marca sesión como inactiva
+            // NO borra correo, password, nombre ni biometria_habilitada
+            .apply()
+    }
+
+    fun sesionActiva(): Boolean =
+        prefs.getBoolean("sesion_activa", true) // true por defecto para no romper flujos existentes
+
+    fun marcarSesionActiva() =
+        prefs.edit().putBoolean("sesion_activa", true).apply()
+
 }
 

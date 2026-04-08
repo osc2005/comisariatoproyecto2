@@ -34,6 +34,7 @@ import com.example.comisariatoproyecto.data.m_CuotaCredito
 import com.example.comisariatoproyecto.data.m_Productos
 import com.example.comisariatoproyecto.data.r_Creditos
 import com.example.comisariatoproyecto.data.r_CuotaCredito
+import com.example.comisariatoproyecto.data.r_Wishlist
 import com.example.comisariatoproyecto.data.r_Reseñas
 
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
@@ -41,6 +42,7 @@ import com.example.comisariatoproyecto.ui.theme.NavyContainer
 import com.example.comisariatoproyecto.ui.theme.SurfaceBase
 import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
 import com.example.comisariatoproyecto.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 import com.example.comisariatoproyecto.ui.theme.YellowStars
 import java.text.NumberFormat
 import java.util.Locale
@@ -51,6 +53,7 @@ fun DetalleProducto(
     producto: m_Productos?,
     repoCuotas: r_CuotaCredito,
     repoCreditos: r_Creditos,
+    repoWishlist: r_Wishlist,          // ← nuevo parámetro
     repoReseñas: r_Reseñas, // Añadido para obtener puntuación real
     empleado: Empleado?,
     reservaPendiente: m_Creditos?,
@@ -61,6 +64,11 @@ fun DetalleProducto(
 ) {
     val cuotas by repoCuotas.obtenerCuotas().collectAsState(initial = emptyList())
 
+    var cantidad           by remember { mutableIntStateOf(1) }
+    var modoCredito        by remember { mutableStateOf(true) }
+    var plazoSeleccionado  by remember { mutableStateOf<m_CuotaCredito?>(null) }
+    var porcentajeCfg      by remember { mutableDoubleStateOf(0.0) }
+    var utilizadoActual    by remember { mutableDoubleStateOf(0.0) }
     // --- CARGAR PUNTUACIÓN REAL ---
     val reseñas by if (producto != null) {
         repoReseñas.obtenerReseñasDeProducto(producto.id).collectAsState(initial = emptyList())
@@ -83,16 +91,19 @@ fun DetalleProducto(
     var utilizadoActual by remember { mutableDoubleStateOf(0.0) }
     var cargandoValidacion by remember { mutableStateOf(true) }
 
+    // ── Wishlist: observamos en tiempo real si este producto ya está guardado ──
+    val isWishlisted by repoWishlist
+        .observarEnWishlist(producto?.id ?: "")
+        .collectAsState(initial = false)
 
-    // --- NUEVO ESTADO PARA LISTA DE DESEOS ---
-    var isWishlisted by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         if (empleado != null) {
             try {
-                porcentajeCfg = repoCreditos.obtenerConfiguracionCredito()
+                porcentajeCfg   = repoCreditos.obtenerConfiguracionCredito()
                 utilizadoActual = repoCreditos.obtenerCreditoUtilizadoReal(empleado.codigoEmpleado)
-            } catch (e: Exception) {  }
+            } catch (_: Exception) { }
         }
         cargandoValidacion = false
     }
@@ -111,30 +122,16 @@ fun DetalleProducto(
         return "L. ${fmt.format(valor)}"
     }
 
-    // 1. ¿Falta seleccionar plazo en modo crédito?
     val requiereSeleccionarPlazo = modoCredito && plazoSeleccionado == null
-
-    // 2. Cálculos de validación
-    val precioBase = if (modoCredito) producto?.precioCredito ?: 0.0 else producto?.precioContado ?: 0.0
-    val totalSimulado = precioBase * cantidad
-
-    // Solo calculamos la cuota si hay un plazo; de lo contrario, el monto a validar es 0
-    // para que no bloquee por "límite" antes de elegir.
-    val cuotaSimulada = if (modoCredito) {
+    val precioBase     = if (modoCredito) producto?.precioCredito ?: 0.0 else producto?.precioContado ?: 0.0
+    val totalSimulado  = precioBase * cantidad
+    val cuotaSimulada  = if (modoCredito) {
         if (plazoSeleccionado != null) totalSimulado / plazoSeleccionado!!.id.toInt() else 0.0
-    } else {
-        totalSimulado // Al contado se valida el total completo
-    }
-
-    val limiteMensual = (empleado?.salario?.toDouble() ?: 0.0) * porcentajeCfg
-    val disponible = (limiteMensual - utilizadoActual).coerceAtLeast(0.0)
-
-    // Solo excederá el límite si ya se eligió un plazo (o es contado) y el monto es mayor al disponible
-    val excedeLimite = !requiereSeleccionarPlazo && cuotaSimulada > disponible
-
-    val estaAgotado =  producto != null && producto.stock <= producto.stockMinimo
-
-
+    } else totalSimulado
+    val limiteMensual  = (empleado?.salario?.toDouble() ?: 0.0) * porcentajeCfg
+    val disponible     = (limiteMensual - utilizadoActual).coerceAtLeast(0.0)
+    val excedeLimite   = !requiereSeleccionarPlazo && cuotaSimulada > disponible
+    val estaAgotado    = producto != null && producto.stock <= producto.stockMinimo
 
     Scaffold(
         containerColor = SurfaceBase,
@@ -152,7 +149,6 @@ fun DetalleProducto(
             if (producto != null) {
                 Column {
                     HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
-
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -176,29 +172,22 @@ fun DetalleProducto(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(SurfaceBase)
-                                    .clickable (enabled = !estaAgotado){ if (cantidad > 1) cantidad-- },
+                                    .clickable(enabled = !estaAgotado) { if (cantidad > 1) cantidad-- },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("−", fontSize = 18.sp, color = NavyPrimary, fontWeight = FontWeight.Medium)
                             }
                             Box(
-                                modifier = Modifier
-                                    .width(36.dp)
-                                    .height(40.dp),
+                                modifier = Modifier.width(36.dp).height(40.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    "$cantidad",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = NavyPrimary
-                                )
+                                Text("$cantidad", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = NavyPrimary)
                             }
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(SurfaceBase)
-                                    .clickable (enabled = !estaAgotado) { if (cantidad < producto.stock) cantidad++ },
+                                    .clickable(enabled = !estaAgotado) { if (cantidad < producto.stock) cantidad++ },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("+", fontSize = 18.sp, color = NavyPrimary, fontWeight = FontWeight.Medium)
@@ -211,7 +200,7 @@ fun DetalleProducto(
                                     onCancelarReserva(reservaPendiente.id)
                                 } else {
                                     onReservar(
-                                        producto!!,
+                                        producto,
                                         if (modoCredito) plazoSeleccionado?.id?.toInt() else null,
                                         cantidad
                                     )
@@ -225,28 +214,29 @@ fun DetalleProducto(
                                 cargandoValidacion -> false
                                 else -> true
                             },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp),
+                            modifier = Modifier.weight(1f).height(40.dp),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = when {
-                                    estaAgotado -> Color.Gray
+                                    estaAgotado          -> Color.Gray
                                     reservaPendiente != null -> Color.Red
-                                    excedeLimite -> Color.Gray
+                                    excedeLimite         -> Color.Gray
                                     requiereSeleccionarPlazo -> NavyPrimary.copy(alpha = 0.6f)
-                                    else -> NavyPrimary
+                                    else                 -> NavyPrimary
                                 },
-                                disabledContainerColor = if (excedeLimite) Color.Gray.copy(alpha = 0.5f) else NavyPrimary.copy(alpha = 0.3f)
+                                disabledContainerColor = if (excedeLimite)
+                                    Color.Gray.copy(alpha = 0.5f)
+                                else
+                                    NavyPrimary.copy(alpha = 0.3f)
                             )
                         ) {
                             Text(
                                 text = when {
-                                    estaAgotado -> "Agotado"
-                                    excedeLimite -> "Límite insuficiente"
+                                    estaAgotado              -> "Agotado"
+                                    excedeLimite             -> "Límite insuficiente"
                                     reservaPendiente != null -> "Cancelar reserva"
                                     requiereSeleccionarPlazo -> "Seleccione un plazo"
-                                    else -> "Reservar producto"
+                                    else                     -> "Reservar producto"
                                 },
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp
@@ -259,9 +249,7 @@ fun DetalleProducto(
     ) { padding ->
         if (producto == null) {
             Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
                 Text("Producto no disponible", color = TextSecondary)
@@ -282,37 +270,39 @@ fun DetalleProducto(
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
-                        model = producto.imagenUrl,
+                        model              = producto.imagenUrl,
                         contentDescription = producto.nombre,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.fillMaxSize()
                     )
 
+                    // ── Botón corazón ────────────────────────────────────────
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd) // Esquina superior derecha
+                            .align(Alignment.TopEnd)
                             .padding(16.dp)
                             .size(40.dp)
                             .clip(RoundedCornerShape(50))
-                            // Cambiamos a un negro/gris traslúcido para que resalte en fondos blancos
                             .background(Color.Black.copy(alpha = 0.3f))
                             .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(50))
-                            .clickable { isWishlisted = !isWishlisted }
+                            .clickable {
+                                // Toggle en Firestore en segundo plano
+                                scope.launch {
+                                    repoWishlist.toggle(producto)
+                                }
+                            }
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (isWishlisted) Icons.Filled.Favorite
+                            imageVector        = if (isWishlisted) Icons.Filled.Favorite
                             else Icons.Default.FavoriteBorder,
                             contentDescription = "Lista de deseos",
-                            // El color blanco del icono contrastará perfectamente con el fondo gris
-                            tint = if (isWishlisted) Color.Red else Color.White,
-                            modifier = Modifier.size(24.dp)
+                            tint               = if (isWishlisted) Color.Red else Color.White,
+                            modifier           = Modifier.size(24.dp)
                         )
                     }
                 }
-
-
 
                 // ── Contenido ────────────────────────────────────────────────
                 Column(
@@ -322,22 +312,19 @@ fun DetalleProducto(
                         .padding(horizontal = 16.dp, vertical = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    // Eyebrow categoría
                     Text(
                         producto.categoriaNombre.uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary.copy(alpha = 0.7f),
+                        fontSize      = 11.sp,
+                        fontWeight    = FontWeight.SemiBold,
+                        color         = TextSecondary.copy(alpha = 0.7f),
                         letterSpacing = 1.sp
                     )
                     Spacer(Modifier.height(4.dp))
-
-                    // Nombre
                     Text(
                         producto.nombre,
-                        fontSize = 22.sp,
+                        fontSize   = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = NavyPrimary,
+                        color      = NavyPrimary,
                         lineHeight = 28.sp
                     )
                     Spacer(Modifier.height(6.dp))
@@ -385,19 +372,18 @@ fun DetalleProducto(
                         )
                     }
                     Spacer(Modifier.height(6.dp))
-                    // Descripción
+
                     Text(
                         producto.descripcion,
-                        fontSize = 13.sp,
-                        color = TextSecondary,
+                        fontSize   = 13.sp,
+                        color      = TextSecondary,
                         lineHeight = 20.sp
                     )
                     Spacer(Modifier.height(16.dp))
-
                     HorizontalDivider(color = NavyPrimary.copy(alpha = 0.08f))
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Toggle Contado / Crédito ─────────────────────────────
+                    // Toggle Contado / Crédito
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -405,10 +391,7 @@ fun DetalleProducto(
                             .background(SurfaceBase)
                             .padding(3.dp)
                     ) {
-                        listOf(
-                            "Contado" to false,
-                            "Crédito" to true
-                        ).forEach { (label, esCredito) ->
+                        listOf("Contado" to false, "Crédito" to true).forEach { (label, esCredito) ->
                             val activo = modoCredito == esCredito
                             Box(
                                 modifier = Modifier
@@ -419,53 +402,42 @@ fun DetalleProducto(
                                     .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    label,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = if (activo) NavyPrimary else TextSecondary
-                                )
+                                Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                                    color = if (activo) NavyPrimary else TextSecondary)
                             }
                         }
                     }
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Precio ───────────────────────────────────────────────
+                    // Precio
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             if (modoCredito) formatLps(producto.precioCredito)
                             else formatLps(producto.precioContado),
-                            fontSize = 28.sp,
+                            fontSize   = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            color = NavyPrimary
+                            color      = NavyPrimary
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             if (modoCredito) "precio al crédito" else "precio al contado",
-                            fontSize = 13.sp,
-                            color = TextSecondary.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            fontSize  = 13.sp,
+                            color     = TextSecondary.copy(alpha = 0.7f),
+                            modifier  = Modifier.padding(bottom = 4.dp)
                         )
                     }
                     Spacer(Modifier.height(20.dp))
 
-                    // ── Selector de plazos ───────────────────────────────────
+                    // Selector de plazos
                     if (modoCredito) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "SELECCIONA TU PLAZO",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextSecondary.copy(alpha = 0.7f),
-                                letterSpacing = 1.sp
-                            )
-                        }
+                        Text(
+                            "SELECCIONA TU PLAZO",
+                            fontSize      = 11.sp,
+                            fontWeight    = FontWeight.SemiBold,
+                            color         = TextSecondary.copy(alpha = 0.7f),
+                            letterSpacing = 1.sp
+                        )
                         Spacer(Modifier.height(8.dp))
-
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -473,7 +445,7 @@ fun DetalleProducto(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             cuotas.forEach { cuota ->
-                                val meses = cuota.id.toInt()
+                                val meses        = cuota.id.toInt()
                                 val cuotaMensual = producto.precioCredito / meses.toDouble()
                                 val seleccionado = plazoSeleccionado?.id == cuota.id
 
@@ -492,32 +464,27 @@ fun DetalleProducto(
                                             shape = RoundedCornerShape(8.dp)
                                         )
                                         .clickable { plazoSeleccionado = cuota }
-                                        .padding(
-                                            vertical = 10.dp,
-                                            horizontal = 12.dp
-                                        ),  // más padding horizontal
+                                        .padding(vertical = 10.dp, horizontal = 12.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
                                         "$meses meses",
-                                        fontSize = 12.sp,
+                                        fontSize   = 12.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = if (seleccionado) NavyPrimary else TextSecondary,
-                                        maxLines = 1
+                                        color      = if (seleccionado) NavyPrimary else TextSecondary,
+                                        maxLines   = 1
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         formatCuota(cuotaMensual),
-                                        fontSize = 13.sp,
+                                        fontSize   = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = NavyPrimary,
-                                        maxLines = 1,
-                                        softWrap = false
+                                        color      = NavyPrimary,
+                                        maxLines   = 1,
+                                        softWrap   = false
                                     )
-
                                 }
                             }
-
                         }
                     }
                 }
