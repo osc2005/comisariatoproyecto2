@@ -1,36 +1,26 @@
 {
   "project_info": {
-    "project_number": "559691697302",
-    "project_id": "comisariatosproyecto",
-    "storage_bucket": "comisariatosproyecto.firebasestorage.app"
+    "project_number": "424513949619",
+    "project_id": "comisariatoproyecto",
+    "storage_bucket": "comisariatoproyecto.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:559691697302:android:e63955ba36da87855306b7",
+        "mobilesdk_app_id": "1:424513949619:android:44f356e5782e95d68b05c6",
         "android_client_info": {
           "package_name": "com.example.comisariatoproyecto"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "559691697302-289a09v464msgc10site5a6ms20aep0s.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCmybKHrEvtppAzbPGGTyMlkFknnGtFNWU"
+          "current_key": "AIzaSyA2WcnthAY9aEmAFMgqdvXxryTMT7yVzeM"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "559691697302-289a09v464msgc10site5a6ms20aep0s.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

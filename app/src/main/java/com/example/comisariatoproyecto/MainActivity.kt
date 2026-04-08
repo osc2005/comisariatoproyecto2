@@ -1,13 +1,11 @@
 package com.example.comisariatoproyecto
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
@@ -31,8 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.NavHost
@@ -142,7 +138,7 @@ fun AppNavigation() {
     val usuarioLogueado = currentRoute != null && currentRoute != "login"
     val mostrarMenu = currentRoute in setOf("inicio", "catalogo", "credito", "perfil")
 
-    // Lógica de Logouts
+    // Lógica de Logout
     val hacerLogoutCompleto: () -> Unit = {
         repoAuth.logout()
         sessionPrefs.cerrarSesionPorInactividad()
@@ -164,12 +160,29 @@ fun AppNavigation() {
             containerColor = Color.White,
             shape = RoundedCornerShape(20.dp),
             icon = {
-                Box(modifier = Modifier.size(64.dp).background(NavyPrimary.copy(alpha = 0.1f), shape = CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(32.dp))
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(NavyPrimary.copy(alpha = 0.1f), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = NavyPrimary,
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             },
-            title = { Text("Sesión cerrada", fontWeight = FontWeight.Bold, color = Color(0xFF111827)) },
-            text = { Text("Por seguridad, tu sesión fue cerrada automáticamente.\nVuelve a iniciar sesión.", textAlign = TextAlign.Center) },
+            title = {
+                Text("Sesión cerrada", fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+            },
+            text = {
+                Text(
+                    "Por seguridad, tu sesión fue cerrada automáticamente.\nVuelve a iniciar sesión.",
+                    textAlign = TextAlign.Center
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -178,7 +191,9 @@ fun AppNavigation() {
                         sessionPrefs.cerrarSesionPorInactividad()
                         nav.navigate("login") { popUpTo(0) { inclusive = true } }
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary)
                 ) {
                     Text("Entendido", color = Color.White)
@@ -188,24 +203,26 @@ fun AppNavigation() {
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().detectarActividad { resetTimer() },
+        modifier = Modifier
+            .fillMaxSize()
+            .detectarActividad { resetTimer() },
         bottomBar = {
             if (mostrarMenu) {
                 MenuInferiorComisariato(
                     itemSeleccionado = when (currentRoute) {
-                        "inicio" -> "Inicio"
+                        "inicio"  -> "Inicio"
                         "catalogo" -> "Catálogo"
                         "credito" -> "Mi Crédito"
-                        "perfil" -> "Perfil"
-                        else -> "Inicio"
+                        "perfil"  -> "Perfil"
+                        else      -> "Inicio"
                     },
                     onItemClick = { item ->
                         val ruta = when (item) {
-                            "Inicio" -> "inicio"
-                            "Catálogo" -> "catalogo"
+                            "Inicio"     -> "inicio"
+                            "Catálogo"   -> "catalogo"
                             "Mi Crédito" -> "credito"
-                            "Perfil" -> "perfil"
-                            else -> "inicio"
+                            "Perfil"     -> "perfil"
+                            else         -> "inicio"
                         }
                         nav.navigate(ruta) {
                             popUpTo("inicio") { saveState = true }
@@ -220,7 +237,9 @@ fun AppNavigation() {
         NavHost(
             navController = nav,
             startDestination = startDestination!!,
-            modifier = Modifier.padding(innerPadding).fillMaxSize()
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
         ) {
             composable("login") {
                 LoginComisariatoScreen(
@@ -255,7 +274,7 @@ fun AppNavigation() {
             }
 
             composable("productos/{categoriaId}/{categoriaNombre}") { backStack ->
-                val cid = backStack.arguments?.getString("categoriaId") ?: ""
+                val cid  = backStack.arguments?.getString("categoriaId") ?: ""
                 val cnom = backStack.arguments?.getString("categoriaNombre") ?: ""
                 ListaProductos(
                     categoria = m_Categoria(id = cid, nombre = cnom),
@@ -270,14 +289,28 @@ fun AppNavigation() {
 
             composable("credito") {
                 PantallaCredito(
-                    onVerDetalle = { c -> creditoSeleccionado = c; nav.navigate("detalleCredito") },
-                    onOpinar = { c -> creditoParaOpinar = c; mostrarSheetOpinar = true }
+                    onVerDetalle = { c ->
+                        creditoSeleccionado = c
+                        nav.navigate("detalleCredito")
+                    },
+                    onOpinar = { c ->
+                        creditoParaOpinar = c
+                        mostrarSheetOpinar = true
+                    }
                 )
             }
 
             composable("detalleCredito") {
                 creditoSeleccionado?.let { c ->
-                    PantallaDetalleCredito(credito = c, onBack = { nav.popBackStack() })
+                    PantallaDetalleCredito(
+                        credito     = c,
+                        empleadoId  = empleadoCargado?.codigoEmpleado ?: "",  // ← agregar
+                        onBack      = { nav.popBackStack() },
+                        onOpinar    = {
+                            creditoParaOpinar = c
+                            mostrarSheetOpinar = true
+                        }
+                    )
                 }
             }
 
@@ -293,7 +326,16 @@ fun AppNavigation() {
                 PantallaWishlist(
                     repoWishlist = r_Wishlist(),
                     onBack = { nav.popBackStack() },
-                    onVerProducto = { nav.navigate("detalleProducto") },
+                    onVerProducto = { productoId ->
+                        scope.launch {
+                            // Buscamos el producto en Firebase antes de navegar
+                            val prod = repoprod.obtenerProductoPorId(productoId)
+                            if (prod != null) {
+                                productoSeleccionado = prod
+                                nav.navigate("detalleProducto")
+                            }
+                        }
+                    },
                     OnLogout = hacerLogoutCompleto
                 )
             }
@@ -305,7 +347,9 @@ fun AppNavigation() {
                         repoCuotas = repocuotas,
                         repoCreditos = repocreditos,
                         repoReseñas = repoReseñas,
-                        reservaPendiente = reservasEmpleado.find { it.productoId == prod.id && it.estado == "Pendiente" },
+                        reservaPendiente = reservasEmpleado.find {
+                            it.productoId == prod.id && it.estado == "Pendiente"
+                        },
                         empleado = empleadoCargado,
                         onBack = { nav.popBackStack() },
                         onVerComentarios = { nav.navigate("comentariosProducto") },
@@ -318,7 +362,9 @@ fun AppNavigation() {
                         onCancelarReserva = { id ->
                             scope.launch {
                                 repocreditos.cancelarReserva(id)
-                                reservasEmpleado = reservasEmpleado.map { if (it.id == id) it.copy(estado = "Cancelado") else it }
+                                reservasEmpleado = reservasEmpleado.map {
+                                    if (it.id == id) it.copy(estado = "Cancelado") else it
+                                }
                             }
                         },
                         repoWishlist = r_Wishlist()
@@ -326,15 +372,35 @@ fun AppNavigation() {
                 }
             }
 
+            // ✅ CORREGIDO: llaves bien cerradas + onOpinar funcional
             composable("comentariosProducto") {
+                // ← Refresca las reservas al entrar para tener datos frescos
+                LaunchedEffect(Unit) {
+                    empleadoCargado?.let { emp ->
+                        reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                    }
+                }
+
                 productoSeleccionado?.let { prod ->
                     ComentariosProducto(
-                        productoId = prod.id,
-                        empleadoId = empleadoCargado?.codigoEmpleado ?: "",
+                        productoId  = prod.id,
+                        empleadoId  = empleadoCargado?.codigoEmpleado ?: "",
                         repoReseñas = repoReseñas,
                         repoCreditos = repocreditos,
-                        onBack = { nav.popBackStack() },
-                        onOpinar = { /* Lógica de opinar */ }
+                        onBack      = { nav.popBackStack() },
+                        onOpinar    = { creditoId ->
+                            val credito = reservasEmpleado.find { it.id == creditoId }
+                            if (credito != null) {
+                                creditoParaOpinar = m_CreditoDetalle(
+                                    id             = credito.id,
+                                    productoId     = credito.productoId,
+                                    productoNombre = credito.productoNombre,
+                                    productoImgUrl = credito.productoImgUrl,
+                                    estado         = credito.estado
+                                )
+                                mostrarSheetOpinar = true
+                            }
+                        }
                     )
                 }
             }
@@ -352,7 +418,8 @@ fun AppNavigation() {
                             onConfirmar = {
                                 scope.launch {
                                     empleadoCargado?.let { emp ->
-                                        reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                                        reservasEmpleado =
+                                            repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
                                     }
                                 }
                                 nav.popBackStack()
@@ -363,24 +430,31 @@ fun AppNavigation() {
             }
         }
 
+        // BottomSheet de opinión (compartido entre PantallaCredito y ComentariosProducto)
         if (mostrarSheetOpinar && creditoParaOpinar != null) {
             OpinarBottomSheet(
-                productoNombre = creditoParaOpinar!!.productoNombre,
+                productoNombre    = creditoParaOpinar!!.productoNombre,
                 productoImagenUrl = creditoParaOpinar!!.productoImgUrl,
-                onDismiss = { mostrarSheetOpinar = false },
+                onDismiss         = { mostrarSheetOpinar = false },
+                // En MainActivity.kt — dentro del OpinarBottomSheet
                 onEnviar = { estrellas, comentario ->
                     scope.launch {
-                        repoReseñas.crearReseña(
-                            creditoId = creditoParaOpinar!!.id,
-                            productoId = creditoParaOpinar!!.productoId,
-                            productoNombre = creditoParaOpinar!!.productoNombre,
-                            empleadoId = empleadoCargado?.codigoEmpleado ?: "",
-                            empleadoNombres = empleadoCargado?.nombres ?: "",
-                            empleadoApellidos = empleadoCargado?.apellidos ?: "",
-                            estrellas = estrellas,
-                            comentario = comentario
-                        )
-                        mostrarSheetOpinar = false
+                        try {
+                            repoReseñas.crearReseña(
+                                creditoId         = creditoParaOpinar!!.id,
+                                productoId        = creditoParaOpinar!!.productoId,
+                                productoNombre    = creditoParaOpinar!!.productoNombre,
+                                empleadoId        = empleadoCargado?.codigoEmpleado ?: "",
+                                empleadoNombres   = empleadoCargado?.nombres ?: "",
+                                empleadoApellidos = empleadoCargado?.apellidos ?: "",
+                                estrellas         = estrellas,
+                                comentario        = comentario
+                            )
+                            mostrarSheetOpinar = false
+                        } catch (e: Exception) {
+                            // Si ya opinó o cualquier error — cerramos sin crash
+                            mostrarSheetOpinar = false
+                        }
                     }
                 }
             )
@@ -390,17 +464,23 @@ fun AppNavigation() {
 
 fun autenticarConBiometria(activity: FragmentActivity, onExito: () -> Unit) {
     val executor = ContextCompat.getMainExecutor(activity)
-    val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
-        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-            super.onAuthenticationSucceeded(result)
-            Handler(Looper.getMainLooper()).postDelayed({ onExito() }, 100)
+    val biometricPrompt = BiometricPrompt(
+        activity, executor,
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                Handler(Looper.getMainLooper()).postDelayed({ onExito() }, 100)
+            }
         }
-    })
+    )
 
     val promptInfo = BiometricPrompt.PromptInfo.Builder()
         .setTitle("Acceso de Seguridad")
         .setSubtitle("Usa tu huella o PIN")
-        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+        .setAllowedAuthenticators(
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        )
         .build()
 
     biometricPrompt.authenticate(promptInfo)

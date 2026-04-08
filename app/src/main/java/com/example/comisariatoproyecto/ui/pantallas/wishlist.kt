@@ -1,113 +1,136 @@
 package com.example.comisariatoproyecto.ui.pantallas
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.comisariatoproyecto.data.m_WishlistItem
 import com.example.comisariatoproyecto.data.r_Wishlist
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.ui.theme.SurfaceBase
 import com.example.comisariatoproyecto.ui.theme.SurfaceWhite
 import com.example.comisariatoproyecto.ui.theme.TextSecondary
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Locale
-
-private val BorderSubtleW = Color(0xFFDDE3EB)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaWishlist(
     repoWishlist: r_Wishlist,
     onBack: () -> Unit,
-    onVerProducto: (String) -> Unit,   // navega al detalle pasando el id del producto
+    onVerProducto: (String) -> Unit,
     OnLogout: () -> Unit
 ) {
-    val items  by repoWishlist.obtenerWishlist().collectAsState(initial = emptyList())
-    val scope  = rememberCoroutineScope()
+    val items by repoWishlist.obtenerWishlist().collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         containerColor = SurfaceBase,
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Mi lista de deseos", fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Mi lista de deseos", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        if (items.isNotEmpty()) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = NavyPrimary.copy(alpha = 0.08f)
+                            ) {
+                                Text(
+                                    "${items.size} items",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = NavyPrimary,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Volver", tint = NavyPrimary)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceWhite)
             )
         }
     ) { padding ->
         if (items.isEmpty()) {
-            // ── Estado vacío ─────────────────────────────────────────────────
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector        = Icons.Outlined.FavoriteBorder,
-                        contentDescription = null,
-                        tint               = TextSecondary.copy(alpha = 0.4f),
-                        modifier           = Modifier.size(64.dp)
-                    )
-                    Spacer(Modifier.height(16.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(NavyPrimary.copy(alpha = 0.06f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Outlined.FavoriteBorder,
+                            contentDescription = null,
+                            tint = NavyPrimary.copy(alpha = 0.4f),
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                     Text(
-                        "Tu lista de deseos está vacía",
-                        fontSize   = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color      = TextSecondary
+                        "Tu lista está vacía",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NavyPrimary
                     )
-                    Spacer(Modifier.height(6.dp))
                     Text(
                         "Presioná el corazón en cualquier\nproducto para guardarlo aquí.",
-                        fontSize   = 13.sp,
-                        color      = TextSecondary.copy(alpha = 0.6f),
-                        textAlign  = TextAlign.Center,
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
                         lineHeight = 20.sp
                     )
                 }
             }
         } else {
-            // ── Lista ────────────────────────────────────────────────────────
             LazyColumn(
-                modifier            = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding      = PaddingValues(vertical = 16.dp)
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                items(items, key = { it.id }) { item ->
+                itemsIndexed(items, key = { _, it -> it.id }) { _, item ->
                     WishlistCard(
-                        item     = item,
-                        onClick  = { onVerProducto(item.id) },
-                        onQuitar = {
-                            scope.launch { repoWishlist.quitar(item.id) }
-                        }
+                        item = item,
+                        onVerProducto = { onVerProducto(item.id) },
+                        onQuitar = { scope.launch { repoWishlist.quitar(item.id) } }
                     )
                 }
             }
@@ -115,102 +138,110 @@ fun PantallaWishlist(
     }
 }
 
-// ── Card individual ───────────────────────────────────────────────────────────
 @Composable
 private fun WishlistCard(
     item: m_WishlistItem,
-    onClick: () -> Unit,
+    onVerProducto: () -> Unit,
     onQuitar: () -> Unit
 ) {
-    fun formatLps(valor: Double): String {
-        val fmt = NumberFormat.getNumberInstance(Locale("es", "HN"))
-        fmt.minimumFractionDigits = 2
-        fmt.maximumFractionDigits = 2
-        return "L. ${fmt.format(valor)}"
+    val fmt = NumberFormat.getNumberInstance(Locale("es", "HN")).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
     }
-    fun formatearFecha(timestamp: Timestamp): String {
-        val date = timestamp.toDate()
-        val formatter = java.text.SimpleDateFormat("dd/MM/yyyy", Locale("es", "HN"))
-        return formatter.format(date)
-    }
-
-
+    val fechaFmt = SimpleDateFormat("dd/MM/yyyy", Locale("es", "HN"))
 
     Card(
-        modifier  = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = SurfaceWhite),
-        elevation = CardDefaults.cardElevation(0.dp),
-        border    = androidx.compose.foundation.BorderStroke(0.5.dp, BorderSubtleW)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, NavyPrimary.copy(alpha = 0.08f))
     ) {
-        Row(
-            modifier          = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Imagen
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFEEF1F8))
-            ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
 
-            }
-
-            // Info
-            // Info
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp) // Espacio pequeño entre textos
+            // ── Fila principal ────────────────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                // Título del Producto
-                Text(
-                    text = item.nombre,
-                    fontSize = 15.sp, // Un poco más grande para resaltar
-                    fontWeight = FontWeight.Bold,
-                    color = NavyPrimary,
-                    maxLines = 1, // Evita que empuje la fecha hacia abajo si el nombre es largo
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                // Imagen
+                AsyncImage(
+                    model = item.imagenUrl,
+                    contentDescription = item.nombre,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(78.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceBase)
                 )
 
-                // Fecha (El diseño "bonito" abajito)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // Info
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                item.nombre,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NavyPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                "Agregado el ${fechaFmt.format(item.fechaAgregado.toDate())}",
+                                fontSize = 11.sp,
+                                color = TextSecondary.copy(alpha = 0.6f)
+                            )
+                        }
+                        // Botón quitar (corazón)
+                        IconButton(
+                            onClick = onQuitar,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Filled.Favorite,
+                                contentDescription = "Quitar",
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Precio
                     Text(
-                        text = "Agregado el: ",
-                        fontSize = 11.sp,
-                        color = TextSecondary.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Normal
-                    )
-                    Text(
-                        text = formatearFecha(item.fechaAgregado),
-                        fontSize = 11.sp,
-                        color = TextSecondary.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Normal
+                        "L. ${fmt.format(item.precioContado)}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NavyPrimary
                     )
                 }
             }
-            // Botón quitar corazón
-            IconButton(
-                onClick  = onQuitar,
-                modifier = Modifier.size(36.dp)
+
+            // ── Botones de acción ────────────────────────────────────────
+            HorizontalDivider(color = NavyPrimary.copy(alpha = 0.06f))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector        = Icons.Filled.Favorite,
-                    contentDescription = "Quitar de wishlist",
-                    tint               = Color.Red,
-                    modifier           = Modifier.size(22.dp)
-                )
+                OutlinedButton(
+                    onClick = onVerProducto,
+                    modifier = Modifier.weight(1f).height(38.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = NavyPrimary),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, NavyPrimary.copy(alpha = 0.3f)),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text("Ver producto", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+
             }
         }
     }
 }
-
-
-

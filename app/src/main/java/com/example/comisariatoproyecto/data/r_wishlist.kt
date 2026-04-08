@@ -96,10 +96,13 @@ class r_Wishlist(
                     val items = snap?.documents?.mapNotNull { doc ->
                         try {
                             m_WishlistItem(
-                                id            = doc.id,
-                                nombre        = doc.getString("nombre") ?: "",
-                                fechaAgregado = doc.getTimestamp("fechaAgregado")
-                                    ?: Timestamp.now()
+                                id             = doc.id,
+                                nombre         = doc.getString("nombre") ?: "",
+                                imagenUrl      = doc.getString("imagenUrl") ?: "",       // ← agregar
+                                precioContado  = doc.getDouble("precioContado") ?: 0.0,  // ← agregar
+                                precioCredito  = doc.getDouble("precioCredito") ?: 0.0,  // ← agregar
+                                categoriaNombre = doc.getString("categoriaNombre") ?: "", // ← agregar
+                                fechaAgregado  = doc.getTimestamp("fechaAgregado") ?: Timestamp.now()
                             )
                         } catch (e: Exception) {
                             Log.e(TAG, "Error mapeando item wishlist: ${e.message}")
