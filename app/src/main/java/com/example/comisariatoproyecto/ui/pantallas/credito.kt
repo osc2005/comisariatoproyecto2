@@ -205,8 +205,6 @@ fun PantallaCredito(
                             }
                         }
                     } else {
-                        // ✅ Espera a que las reseñas carguen antes de mostrar tarjetas
-                        // Esto evita que "Opinar" aparezca cuando el empleado ya opinó
                         if (!reseñasCargadas) {
                             Box(
                                 modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
@@ -258,24 +256,32 @@ fun TarjetaCreditoLista(
                 AsyncImage(
                     model = credito.productoImgUrl,
                     contentDescription = null,
-                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)).background(SurfaceBase),
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceBase),
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            credito.productoNombre,
-                            fontSize = 15.sp, fontWeight = FontWeight.Bold, color = NavyPrimary,
-                            maxLines = 2,
-                            lineHeight = 18.sp,
-                            overflow = TextOverflow.Ellipsis,
+                            text = credito.productoNombre,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NavyPrimary,
+                            lineHeight = 20.sp,
                             modifier = Modifier.weight(1f)
                         )
                         Surface(shape = RoundedCornerShape(6.dp), color = config.containerColor) {
                             Text(
                                 text = if (pagadoTotal) "PAGADO" else credito.estado.uppercase(),
-                                fontSize = 9.sp, fontWeight = FontWeight.Bold, color = config.color,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = config.color,
                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
@@ -289,9 +295,16 @@ fun TarjetaCreditoLista(
             }
 
             if ((credito.estado == "Aprobado" || pagadoTotal) && !yaOpino) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), color = DividerColor, thickness = 0.5.dp)
+                HorizontalDivider(
+                    modifier  = Modifier.padding(horizontal = 14.dp),
+                    color     = DividerColor,
+                    thickness = 0.5.dp
+                )
                 Box(
-                    modifier = Modifier.fillMaxWidth().clickable { onOpinar() }.padding(vertical = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpinar() }
+                        .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -319,7 +332,7 @@ fun AccionRapidaCredito(credito: m_CreditoDetalle, pagadoTotal: Boolean) {
                 tint = if (credito.estadoCredito == "Activo") GreenPrimary else TextSecondary,
                 modifier = Modifier.size(14.dp)
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 if (credito.estadoCredito == "Activo") "CRÉDITO ACTIVO" else "CRÉDITO INACTIVO",
                 fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
