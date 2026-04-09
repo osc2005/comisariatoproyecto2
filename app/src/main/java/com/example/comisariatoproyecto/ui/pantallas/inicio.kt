@@ -359,7 +359,7 @@ fun HeaderInicio(
                             .background(GreenPrimary)
                     )
                     Text(
-                        "Comisariato",
+                        "Comisariato San Jose",
                         color    = SurfaceWhite,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium

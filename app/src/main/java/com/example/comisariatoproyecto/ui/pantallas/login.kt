@@ -39,16 +39,18 @@ import com.example.comisariatoproyecto.utils.SessionPrefs
 import kotlinx.coroutines.launch
 
 // ── Paleta ───────────────────────────────────────────────────────────────────
-private val Navy900   = Color(0xFF0B1D3A)
-private val Navy800   = Color(0xFF112244)
-private val Navy600   = NavyPrimary
-private val Accent    = Color(0xFF4F8EF7)
-private val CardBg    = Color(0xFFFAFBFF)
+private val Navy900       = Color(0xFF0B1D3A)
+private val Navy800       = Color(0xFF112244)
+private val Navy600       = NavyPrimary
+private val CardBg        = Color(0xFFFAFBFF)
 private val TextPrimary   = Color(0xFF0F172A)
 private val TextSecondary = Color(0xFF64748B)
 private val BorderColor   = Color(0xFFE2E8F0)
 private val ErrorRed      = Color(0xFFEF4444)
 private val White         = Color.White
+
+// ← Cambia este número por el real de RRHH
+private const val TELEFONO_RRHH = "tel:33039696"
 
 @Composable
 fun LoginComisariatoScreen(
@@ -69,14 +71,14 @@ fun LoginComisariatoScreen(
     var biometriaDisponible by remember { mutableStateOf(false) }
     var modoPrimeraVez      by remember { mutableStateOf(true) }
     var passwordVisible     by remember { mutableStateOf(false) }
+    var mostrarModoInactivo by remember { mutableStateOf(false) }
 
-    // Animación del círculo decorativo
     val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
     val circleOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue  = 1f,
+        initialValue  = 0f,
+        targetValue   = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
+            animation  = tween(8000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "circle"
@@ -102,9 +104,7 @@ fun LoginComisariatoScreen(
                     colors = listOf(Navy900, Navy800, Color(0xFF162B52))
                 )
             )
-            .drawBehind {
-                drawDecorativeCircles(circleOffset)
-            }
+            .drawBehind { drawDecorativeCircles(circleOffset) }
     ) {
 
         // ── HEADER ────────────────────────────────────────────────────────────
@@ -114,7 +114,6 @@ fun LoginComisariatoScreen(
                 .padding(top = 72.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo mark
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -125,42 +124,27 @@ fun LoginComisariatoScreen(
             ) {
                 Text("C", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = White)
             }
-
             Spacer(Modifier.height(16.dp))
-
-            Text(
-                text       = "Comisariato",
-                fontSize   = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color      = White,
-                letterSpacing = (-0.5).sp
-            )
+            Text("Comisariato", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = White, letterSpacing = (-0.5).sp)
             Spacer(Modifier.height(4.dp))
-            Text(
-                text      = "Sistema de Crédito Empresarial",
-                fontSize  = 13.sp,
-                color     = White.copy(alpha = 0.55f),
-                letterSpacing = 0.3.sp
-            )
+            Text("Sistema de Crédito Empresarial", fontSize = 13.sp, color = White.copy(alpha = 0.55f), letterSpacing = 0.3.sp)
         }
 
         // ── CARD ──────────────────────────────────────────────────────────────
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter),
-            shape  = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBg),
+            modifier  = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+            shape     = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            colors    = CardDefaults.cardColors(containerColor = CardBg),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             AnimatedContent(
-                targetState    = modoPrimeraVez,
+                targetState    = Triple(modoPrimeraVez, biometriaDisponible, mostrarModoInactivo),
                 transitionSpec = {
-                    (fadeIn(tween(300)) + slideInHorizontally(tween(300)) { if (targetState) -40 else 40 }) togetherWith
-                            (fadeOut(tween(200)) + slideOutHorizontally(tween(200)) { if (targetState) 40 else -40 })
+                    (fadeIn(tween(300)) + slideInVertically(tween(300)) { 20 }) togetherWith
+                            (fadeOut(tween(200)) + slideOutVertically(tween(200)) { -20 })
                 },
                 label = "login_mode"
-            ) { esPrimeraVez ->
+            ) { (esPrimeraVez, _, esInactivo) ->
 
                 Column(
                     modifier = Modifier
@@ -170,39 +154,131 @@ fun LoginComisariatoScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
-                    if (esPrimeraVez) {
-                        // ── MODO NORMAL ───────────────────────────────────────
-
-                        // Pill indicador
+                    // ── MODO INACTIVO ─────────────────────────────────────────
+                    if (esInactivo) {
                         Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
+                                .width(40.dp).height(4.dp)
                                 .clip(CircleShape)
                                 .background(BorderColor)
                         )
+                        Spacer(Modifier.height(28.dp))
 
-                        Spacer(Modifier.height(24.dp))
-
-                        Text(
-                            text       = "Bienvenido",
-                            fontSize   = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color      = TextPrimary,
-                            modifier   = Modifier.fillMaxWidth()
-                        )
-                        Text(
-                            text     = "Ingresá tus credenciales para continuar",
-                            fontSize = 13.sp,
-                            color    = TextSecondary,
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp)
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFEF2F2))
+                                .border(1.5.dp, Color(0xFFFECACA), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Outlined.Lock, null, tint = ErrorRed, modifier = Modifier.size(32.dp))
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        Text(
+                            "Cuenta inactiva",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Tu cuenta ha sido desactivada.\nComunicate con Recursos Humanos para reactivarla.",
+                            fontSize = 13.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 20.sp
                         )
 
                         Spacer(Modifier.height(28.dp))
 
-                        // Campo correo
+                        FieldLabel("Correo electrónico")
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value         = correo,
+                            onValueChange = {},
+                            readOnly      = true,
+                            enabled       = false,
+                            modifier      = Modifier.fillMaxWidth(),
+                            leadingIcon   = {
+                                Icon(
+                                    Icons.Outlined.Person, null,
+                                    tint = TextSecondary.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            shape  = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledBorderColor     = BorderColor,
+                                disabledContainerColor  = Color(0xFFF8FAFC),
+                                disabledTextColor       = TextSecondary,
+                                disabledLeadingIconColor = TextSecondary.copy(alpha = 0.4f)
+                            ),
+                            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                        )
+
+                        Spacer(Modifier.height(28.dp))
+
+                        // Botón llamar RRHH
+                        Button(
+                            onClick = {
+                                val intent = android.content.Intent(
+                                    android.content.Intent.ACTION_DIAL,
+                                    android.net.Uri.parse(TELEFONO_RRHH)
+                                )
+                                context.startActivity(intent)
+                            },
+                            modifier  = Modifier.fillMaxWidth().height(52.dp),
+                            shape     = RoundedCornerShape(14.dp),
+                            colors    = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+                            elevation = ButtonDefaults.buttonElevation(0.dp)
+                        ) {
+                            Text(
+                                "Llamar a Recursos Humanos",
+                                color = White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp
+                            )
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                                mostrarModoInactivo = false
+                                modoPrimeraVez = true
+                                errorPassword = ""
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape    = RoundedCornerShape(14.dp),
+                            border   = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                            colors   = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                        ) {
+                            Text("Volver al inicio", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+
+                        return@AnimatedContent
+                    }
+
+                    // ── MODO NORMAL ───────────────────────────────────────────
+                    if (esPrimeraVez) {
+
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp).height(4.dp)
+                                .clip(CircleShape)
+                                .background(BorderColor)
+                        )
+                        Spacer(Modifier.height(24.dp))
+
+                        Text("Bienvenido", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.fillMaxWidth())
+                        Text("Ingresá tus credenciales para continuar", fontSize = 13.sp, color = TextSecondary, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+
+                        Spacer(Modifier.height(28.dp))
+
                         FieldLabel("Correo electrónico")
                         Spacer(Modifier.height(6.dp))
                         OutlinedTextField(
@@ -225,7 +301,6 @@ fun LoginComisariatoScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // Campo contraseña
                         FieldLabel("Contraseña")
                         Spacer(Modifier.height(6.dp))
                         OutlinedTextField(
@@ -248,18 +323,17 @@ fun LoginComisariatoScreen(
                                     )
                                 }
                             },
-                            singleLine            = true,
-                            visualTransformation  = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            isError               = errorPassword.isNotEmpty(),
-                            shape                 = RoundedCornerShape(14.dp),
-                            colors                = loginFieldColors(),
-                            textStyle             = LocalTextStyle.current.copy(fontSize = 14.sp, color = TextPrimary)
+                            singleLine           = true,
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            isError              = errorPassword.isNotEmpty(),
+                            shape                = RoundedCornerShape(14.dp),
+                            colors               = loginFieldColors(),
+                            textStyle            = LocalTextStyle.current.copy(fontSize = 14.sp, color = TextPrimary)
                         )
                         if (errorPassword.isNotEmpty()) ErrorText(errorPassword)
 
                         Spacer(Modifier.height(28.dp))
 
-                        // Botón ingresar
                         Button(
                             onClick = {
                                 errorCorreo   = ""
@@ -284,17 +358,19 @@ fun LoginComisariatoScreen(
                                             modoPrimeraVez      = false
                                             onLoginSuccess()
                                         }
-                                        LoginResult.inactivo      -> errorPassword = "Tu cuenta está inactiva. Contactá a Recursos Humanos."
-                                        LoginResult.ERROR_CREDENCIALES -> errorPassword = "Correo o contraseña incorrectos."
+                                        LoginResult.inactivo -> {
+                                            mostrarModoInactivo = true
+                                            errorPassword = ""
+                                        }
+                                        LoginResult.ERROR_CREDENCIALES ->
+                                            errorPassword = "Correo o contraseña incorrectos."
                                     }
                                 }
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            enabled = !isLoading,
-                            shape   = RoundedCornerShape(14.dp),
-                            colors  = ButtonDefaults.buttonColors(
+                            modifier  = Modifier.fillMaxWidth().height(52.dp),
+                            enabled   = !isLoading,
+                            shape     = RoundedCornerShape(14.dp),
+                            colors    = ButtonDefaults.buttonColors(
                                 containerColor         = Navy600,
                                 disabledContainerColor = Navy600.copy(alpha = 0.4f)
                             ),
@@ -312,22 +388,17 @@ fun LoginComisariatoScreen(
 
                         Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
+                                .width(40.dp).height(4.dp)
                                 .clip(CircleShape)
                                 .background(BorderColor)
                         )
-
                         Spacer(Modifier.height(32.dp))
 
-                        // Avatar con inicial
                         Box(
                             modifier = Modifier
                                 .size(72.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    Brush.verticalGradient(listOf(Navy600, Navy900))
-                                )
+                                .background(Brush.verticalGradient(listOf(Navy600, Navy900)))
                                 .border(3.dp, White, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
@@ -341,24 +412,12 @@ fun LoginComisariatoScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        Text(
-                            text       = nombreGuardado.ifBlank { "Usuario" },
-                            fontSize   = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color      = TextPrimary,
-                            textAlign  = TextAlign.Center
-                        )
+                        Text(nombreGuardado.ifBlank { "Usuario" }, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            text      = sessionPrefs.obtenerCorreo(),
-                            fontSize  = 13.sp,
-                            color     = TextSecondary,
-                            textAlign = TextAlign.Center
-                        )
+                        Text(sessionPrefs.obtenerCorreo(), fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
 
                         Spacer(Modifier.height(32.dp))
 
-                        // Área del ícono de huella con efecto pulsante
                         val pulseAnim by rememberInfiniteTransition(label = "pulse").animateFloat(
                             initialValue  = 0.85f,
                             targetValue   = 1f,
@@ -367,14 +426,12 @@ fun LoginComisariatoScreen(
                         )
 
                         Box(contentAlignment = Alignment.Center) {
-                            // Anillo exterior pulsante
                             Box(
                                 modifier = Modifier
                                     .size((72 * pulseAnim).dp)
                                     .clip(CircleShape)
                                     .background(Navy600.copy(alpha = 0.08f))
                             )
-                            // Botón biometría
                             Button(
                                 onClick = {
                                     activity?.let { act ->
@@ -395,27 +452,27 @@ fun LoginComisariatoScreen(
                                                     LoginResult.inactivo -> {
                                                         sessionPrefs.desactivarBiometria()
                                                         sessionPrefs.limpiarSesionLocal()
+                                                        correo              = correoGuardado
                                                         biometriaDisponible = false
-                                                        modoPrimeraVez      = true
-                                                        errorPassword = "Tu cuenta está inactiva. Contactá a Recursos Humanos."
+                                                        mostrarModoInactivo = true
+                                                        errorPassword       = ""
                                                     }
-                                                    LoginResult.ERROR_CREDENCIALES -> {
+                                                    LoginResult.ERROR_CREDENCIALES ->
                                                         errorPassword = "No se pudo autenticar. Iniciá sesión manualmente."
-                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 },
-                                modifier  = Modifier.size(60.dp),
-                                enabled   = !isLoading,
-                                shape     = CircleShape,
-                                colors    = ButtonDefaults.buttonColors(
+                                modifier       = Modifier.size(60.dp),
+                                enabled        = !isLoading,
+                                shape          = CircleShape,
+                                colors         = ButtonDefaults.buttonColors(
                                     containerColor         = Navy600,
                                     disabledContainerColor = Navy600.copy(alpha = 0.4f)
                                 ),
                                 contentPadding = PaddingValues(0.dp),
-                                elevation = ButtonDefaults.buttonElevation(0.dp)
+                                elevation      = ButtonDefaults.buttonElevation(0.dp)
                             ) {
                                 if (isLoading) {
                                     CircularProgressIndicator(modifier = Modifier.size(22.dp), color = White, strokeWidth = 2.dp)
@@ -426,13 +483,7 @@ fun LoginComisariatoScreen(
                         }
 
                         Spacer(Modifier.height(16.dp))
-
-                        Text(
-                            text      = "Tocá para autenticarte",
-                            fontSize  = 13.sp,
-                            color     = TextSecondary,
-                            textAlign = TextAlign.Center
-                        )
+                        Text("Tocá para autenticarte", fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
 
                         if (errorPassword.isNotEmpty()) {
                             Spacer(Modifier.height(12.dp))
@@ -441,28 +492,23 @@ fun LoginComisariatoScreen(
 
                         Spacer(Modifier.height(24.dp))
 
-                        // Separador
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                             Text("  o  ", fontSize = 12.sp, color = TextSecondary)
                             HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                         }
+
                         Spacer(Modifier.height(24.dp))
-                        Spacer(Modifier.height(16.dp))
 
                         OutlinedButton(
                             onClick = { modoPrimeraVez = true; errorPassword = "" },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape  = RoundedCornerShape(14.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                            shape    = RoundedCornerShape(14.dp),
+                            border   = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                            colors   = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
                         ) {
                             Text("Usar otra cuenta", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         }
-
                     }
                 }
             }
@@ -475,12 +521,12 @@ fun LoginComisariatoScreen(
 @Composable
 private fun FieldLabel(texto: String) {
     Text(
-        text       = texto,
-        fontSize   = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        color      = TextSecondary,
+        text          = texto,
+        fontSize      = 12.sp,
+        fontWeight    = FontWeight.SemiBold,
+        color         = TextSecondary,
         letterSpacing = 0.3.sp,
-        modifier   = Modifier.fillMaxWidth()
+        modifier      = Modifier.fillMaxWidth()
     )
 }
 
@@ -499,17 +545,16 @@ private fun ErrorText(texto: String, centered: Boolean = false) {
 
 @Composable
 private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor   = NavyPrimary,
-    unfocusedBorderColor = BorderColor,
-    errorBorderColor     = ErrorRed,
+    focusedBorderColor      = NavyPrimary,
+    unfocusedBorderColor    = BorderColor,
+    errorBorderColor        = ErrorRed,
     focusedContainerColor   = White,
     unfocusedContainerColor = White,
     errorContainerColor     = Color(0xFFFFF5F5),
-    cursorColor = NavyPrimary
+    cursorColor             = NavyPrimary
 )
 
 private fun DrawScope.drawDecorativeCircles(offset: Float) {
-    val navy = Navy900
     drawCircle(
         color  = Color(0x14FFFFFF),
         radius = size.width * 0.65f,
