@@ -267,7 +267,9 @@ fun TarjetaCreditoLista(
                         Text(
                             credito.productoNombre,
                             fontSize = 15.sp, fontWeight = FontWeight.Bold, color = NavyPrimary,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            maxLines = 2,
+                            lineHeight = 18.sp,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
                         Surface(shape = RoundedCornerShape(6.dp), color = config.containerColor) {
