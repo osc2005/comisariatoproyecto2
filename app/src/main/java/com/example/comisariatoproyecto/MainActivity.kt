@@ -142,6 +142,8 @@ fun AppNavigation() {
     val hacerLogoutCompleto: () -> Unit = {
         repoAuth.logout()
         sessionPrefs.cerrarSesionPorInactividad()
+        empleadoCargado = null
+        reservasEmpleado = emptyList()
         nav.navigate("login") {
             popUpTo(0) { inclusive = true }
             launchSingleTop = true
@@ -189,6 +191,8 @@ fun AppNavigation() {
                         mostrarDialogoInactividad = false
                         repoAuth.logout()
                         sessionPrefs.cerrarSesionPorInactividad()
+                        empleadoCargado = null
+                        reservasEmpleado = emptyList()
                         nav.navigate("login") { popUpTo(0) { inclusive = true } }
                     },
                     modifier = Modifier
@@ -245,7 +249,18 @@ fun AppNavigation() {
                 LoginComisariatoScreen(
                     repo = repoAuth,
                     onLoginSuccess = {
-                        nav.navigate("inicio") { popUpTo("login") { inclusive = true } }
+                        scope.launch {
+                            try {
+                                val perfil = repoAuth.obtenerMiPerfilCompleto()
+                                empleadoCargado = perfil.second
+                                empleadoCargado?.let { emp ->
+                                    reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                                }
+                            } catch (e: Exception) {
+                                // Fallback silente
+                            }
+                            nav.navigate("inicio") { popUpTo("login") { inclusive = true } }
+                        }
                     }
                 )
             }
