@@ -49,7 +49,6 @@ private val BorderColor   = Color(0xFFE2E8F0)
 private val ErrorRed      = Color(0xFFEF4444)
 private val White         = Color.White
 
-// ← Cambia este número por el real de RRHH
 private const val TELEFONO_RRHH = "tel:33039696"
 
 @Composable
@@ -72,6 +71,8 @@ fun LoginComisariatoScreen(
     var modoPrimeraVez      by remember { mutableStateOf(true) }
     var passwordVisible     by remember { mutableStateOf(false) }
     var mostrarModoInactivo by remember { mutableStateOf(false) }
+    // ← Bloquea el campo correo después de un intento con cuenta inactiva
+    var correoBloquado      by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
     val circleOffset by infiniteTransition.animateFloat(
@@ -99,19 +100,13 @@ fun LoginComisariatoScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Navy900, Navy800, Color(0xFF162B52))
-                )
-            )
+            .background(Brush.verticalGradient(colors = listOf(Navy900, Navy800, Color(0xFF162B52))))
             .drawBehind { drawDecorativeCircles(circleOffset) }
     ) {
 
         // ── HEADER ────────────────────────────────────────────────────────────
         Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 72.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 72.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -206,15 +201,15 @@ fun LoginComisariatoScreen(
                             leadingIcon   = {
                                 Icon(
                                     Icons.Outlined.Person, null,
-                                    tint = TextSecondary.copy(alpha = 0.4f),
+                                    tint     = TextSecondary.copy(alpha = 0.4f),
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
                             shape  = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                disabledBorderColor     = BorderColor,
-                                disabledContainerColor  = Color(0xFFF8FAFC),
-                                disabledTextColor       = TextSecondary,
+                                disabledBorderColor      = BorderColor,
+                                disabledContainerColor   = Color(0xFFF8FAFC),
+                                disabledTextColor        = TextSecondary,
                                 disabledLeadingIconColor = TextSecondary.copy(alpha = 0.4f)
                             ),
                             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
@@ -222,7 +217,6 @@ fun LoginComisariatoScreen(
 
                         Spacer(Modifier.height(28.dp))
 
-                        // Botón llamar RRHH
                         Button(
                             onClick = {
                                 val intent = android.content.Intent(
@@ -236,21 +230,18 @@ fun LoginComisariatoScreen(
                             colors    = ButtonDefaults.buttonColors(containerColor = ErrorRed),
                             elevation = ButtonDefaults.buttonElevation(0.dp)
                         ) {
-                            Text(
-                                "Llamar a Recursos Humanos",
-                                color = White,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp
-                            )
+                            Text("Llamar a Recursos Humanos", color = White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
 
                         Spacer(Modifier.height(12.dp))
 
+                        // Vuelve al login normal pero con correo bloqueado
                         OutlinedButton(
                             onClick = {
                                 mostrarModoInactivo = false
-                                modoPrimeraVez = true
-                                errorPassword = ""
+                                modoPrimeraVez      = true
+                                errorPassword       = ""
+                                // correoBloquado se mantiene en true — no se resetea
                             },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             shape    = RoundedCornerShape(14.dp),
@@ -279,28 +270,53 @@ fun LoginComisariatoScreen(
 
                         Spacer(Modifier.height(28.dp))
 
+                        // ── Campo correo: bloqueado si la cuenta estaba inactiva ──
                         FieldLabel("Correo electrónico")
                         Spacer(Modifier.height(6.dp))
                         OutlinedTextField(
                             value         = correo,
-                            onValueChange = { correo = it; errorCorreo = "" },
+                            onValueChange = { if (!correoBloquado) { correo = it; errorCorreo = "" } },
+                            readOnly      = correoBloquado,
+                            enabled       = !correoBloquado,
                             modifier      = Modifier.fillMaxWidth(),
                             placeholder   = { Text("usuario@empresa.com", color = TextSecondary.copy(alpha = 0.5f), fontSize = 14.sp) },
                             leadingIcon   = {
-                                Icon(Icons.Outlined.Person, null,
-                                    tint = if (correo.isNotEmpty()) Navy600 else TextSecondary.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.Outlined.Person, null,
+                                    tint     = if (correoBloquado) TextSecondary.copy(alpha = 0.4f)
+                                    else if (correo.isNotEmpty()) Navy600
+                                    else TextSecondary.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             },
                             singleLine  = true,
                             isError     = errorCorreo.isNotEmpty(),
                             shape       = RoundedCornerShape(14.dp),
-                            colors      = loginFieldColors(),
+                            colors      = if (correoBloquado) OutlinedTextFieldDefaults.colors(
+                                disabledBorderColor      = BorderColor,
+                                disabledContainerColor   = Color(0xFFF8FAFC),
+                                disabledTextColor        = TextSecondary,
+                                disabledLeadingIconColor = TextSecondary.copy(alpha = 0.4f)
+                            ) else loginFieldColors(),
                             textStyle   = LocalTextStyle.current.copy(fontSize = 14.sp, color = TextPrimary)
                         )
                         if (errorCorreo.isNotEmpty()) ErrorText(errorCorreo)
 
+                        // Mensaje sutil si el correo está bloqueado
+                        if (correoBloquado) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "El correo no puede modificarse mientras la cuenta está inactiva.",
+                                fontSize  = 11.sp,
+                                color     = ErrorRed.copy(alpha = 0.7f),
+                                modifier  = Modifier.fillMaxWidth().padding(start = 4.dp),
+                                lineHeight = 16.sp
+                            )
+                        }
+
                         Spacer(Modifier.height(16.dp))
 
+                        // ── Campo contraseña: siempre habilitado ──
                         FieldLabel("Contraseña")
                         Spacer(Modifier.height(6.dp))
                         OutlinedTextField(
@@ -309,16 +325,18 @@ fun LoginComisariatoScreen(
                             modifier      = Modifier.fillMaxWidth(),
                             placeholder   = { Text("••••••••", color = TextSecondary.copy(alpha = 0.5f), fontSize = 14.sp) },
                             leadingIcon   = {
-                                Icon(Icons.Outlined.Lock, null,
-                                    tint = if (password.isNotEmpty()) Navy600 else TextSecondary.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.Outlined.Lock, null,
+                                    tint     = if (password.isNotEmpty()) Navy600 else TextSecondary.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                     Icon(
                                         if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                         null,
-                                        tint = TextSecondary.copy(alpha = 0.5f),
+                                        tint     = TextSecondary.copy(alpha = 0.5f),
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -356,11 +374,13 @@ fun LoginComisariatoScreen(
                                             biometriaDisponible = true
                                             nombreGuardado      = usuario?.nombre ?: ""
                                             modoPrimeraVez      = false
+                                            correoBloquado      = false // ← resetea al ingresar exitosamente
                                             onLoginSuccess()
                                         }
                                         LoginResult.inactivo -> {
                                             mostrarModoInactivo = true
-                                            errorPassword = ""
+                                            correoBloquado      = true  // ← bloquea el correo
+                                            errorPassword       = ""
                                         }
                                         LoginResult.ERROR_CREDENCIALES ->
                                             errorPassword = "Correo o contraseña incorrectos."
@@ -454,6 +474,7 @@ fun LoginComisariatoScreen(
                                                         sessionPrefs.limpiarSesionLocal()
                                                         correo              = correoGuardado
                                                         biometriaDisponible = false
+                                                        correoBloquado      = true  // ← bloquea el correo
                                                         mostrarModoInactivo = true
                                                         errorPassword       = ""
                                                     }
@@ -483,7 +504,7 @@ fun LoginComisariatoScreen(
                         }
 
                         Spacer(Modifier.height(16.dp))
-                        Text("Tocá para autenticarte", fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
+                        Text("Tocá para iniciar sesión biometricamente", fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
 
                         if (errorPassword.isNotEmpty()) {
                             Spacer(Modifier.height(12.dp))
@@ -495,20 +516,8 @@ fun LoginComisariatoScreen(
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                             Text("  o  ", fontSize = 12.sp, color = TextSecondary)
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                         }
 
-                        Spacer(Modifier.height(24.dp))
-
-                        OutlinedButton(
-                            onClick = { modoPrimeraVez = true; errorPassword = "" },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape    = RoundedCornerShape(14.dp),
-                            border   = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                            colors   = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                        ) {
-                            Text("Usar otra cuenta", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
                     }
                 }
             }

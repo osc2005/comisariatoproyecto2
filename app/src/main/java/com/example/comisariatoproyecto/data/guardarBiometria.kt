@@ -139,5 +139,8 @@ class SessionPrefs(context: Context) {
     fun marcarSesionActiva() =
         prefs.edit().putBoolean("sesion_activa", true).apply()
 
+
+
+
 }
 
