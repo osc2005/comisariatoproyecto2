@@ -504,7 +504,7 @@ fun LoginComisariatoScreen(
                         }
 
                         Spacer(Modifier.height(16.dp))
-                        Text("Tocá para autenticarte", fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
+                        Text("Tocá para iniciar sesión biometricamente", fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
 
                         if (errorPassword.isNotEmpty()) {
                             Spacer(Modifier.height(12.dp))
@@ -516,20 +516,8 @@ fun LoginComisariatoScreen(
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                             Text("  o  ", fontSize = 12.sp, color = TextSecondary)
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                         }
 
-                        Spacer(Modifier.height(24.dp))
-
-                        OutlinedButton(
-                            onClick = { modoPrimeraVez = true; errorPassword = "" },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape    = RoundedCornerShape(14.dp),
-                            border   = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                            colors   = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                        ) {
-                            Text("Usar otra cuenta", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
                     }
                 }
             }
