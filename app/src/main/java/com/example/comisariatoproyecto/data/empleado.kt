@@ -39,8 +39,11 @@ data class Empleado(
     /** Estado del empleado (ej: "activo", "inactivo") */
     val estado: String = "",
 
-    /** Fecha de registro en Firestore */
+    /** Fecha de inicio en la empresa */
     val fechaInicio: Timestamp? = null,
+
+    /** Fecha de registro en Firestore */
+    val fechaRegistro: Timestamp? = null,
 
     /** Nombres del empleado */
     val nombres: String = "",
