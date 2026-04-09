@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -186,15 +187,17 @@ fun ConfirmarReserva(
             Spacer(Modifier.height(12.dp))
 
             // -- Card de Producto --
-            Card(
-                modifier = Modifier.padding(horizontal = 16.dp),
+            Card(modifier = Modifier.padding(horizontal = 16.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(0.5.dp, NavyPrimary.copy(alpha = 0.1f))
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+
+                    verticalAlignment = Alignment.Top
                 ) {
                     AsyncImage(
                         model = producto.imagenUrl,
@@ -204,16 +207,40 @@ fun ConfirmarReserva(
                             .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop
                     )
+
                     Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(producto.nombre, fontWeight = FontWeight.Bold, color = NavyPrimary)
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
-                            if (esCredito) "Crédito a $plazoMeses meses" else "Pago al Contado",
+                            text = producto.nombre,
+                            fontWeight = FontWeight.Bold,
+                            color = NavyPrimary,
+                            fontSize = 15.sp,
+
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 18.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = if (esCredito) "Crédito a $plazoMeses meses" else "Pago al Contado",
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
                     }
-                    Text(formatLps(totalFinal), fontWeight = FontWeight.Bold, color = NavyPrimary)
+
+                    Spacer(Modifier.width(8.dp))
+
+
+                    Text(
+                        text = formatLps(totalFinal),
+                        fontWeight = FontWeight.Bold,
+                        color = NavyPrimary,
+                        fontSize = 15.sp,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
                 }
             }
 

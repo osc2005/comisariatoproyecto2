@@ -27,8 +27,10 @@ import com.example.comisariatoproyecto.ui.componentes.RatingBar
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.getValue
@@ -131,8 +133,10 @@ fun ListaProductos(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 FilterChip(
                     selected = ordenPrecio == "menor_mayor",
@@ -338,7 +342,7 @@ fun ProductoCard(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = producto.nombre.uppercase(),
+                text = producto.nombre,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Normal,
                 color = TextSecondary,
