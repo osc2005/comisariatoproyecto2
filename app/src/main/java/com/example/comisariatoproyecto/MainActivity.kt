@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -47,19 +48,27 @@ import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.initialize
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Firebase.initialize(context = this)
+
         Firebase.appCheck.installAppCheckProviderFactory(
             PlayIntegrityAppCheckProviderFactory.getInstance()
         )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+        }
+
         crearCanalNotificaciones(this)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         enableEdgeToEdge()
         setContent {
+
             ComisariatoProyectoTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -81,7 +90,16 @@ fun crearCanalNotificaciones(activity: MainActivity) {
         manager?.createNotificationChannel(canal)
     }
 }
-
+fun mostrarNotificacion(context: android.content.Context, titulo: String, mensaje: String) {
+    val builder = androidx.core.app.NotificationCompat.Builder(context, "canal_id")
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle(titulo)
+        .setContentText(mensaje)
+        .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+    context.getSystemService(android.app.NotificationManager::class.java)
+        ?.notify(System.currentTimeMillis().toInt(), builder.build())
+}
 @Composable
 fun AppNavigation() {
     val nav = rememberNavController()
@@ -96,8 +114,7 @@ fun AppNavigation() {
     val repocuotas = remember { r_CuotaCredito() }
     val repoReseñas = remember { r_Reseñas() }
     val sessionPrefs = remember { SessionPrefs(context) }
-
-    // Estados
+    var rolUsuario by remember { mutableStateOf<String?>(null) } // Estado para guardar el rol    // Estados
     var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
     var productoSeleccionado by remember { mutableStateOf<m_Productos?>(null) }
     var creditoSeleccionado by remember { mutableStateOf<m_CreditoDetalle?>(null) }
@@ -108,8 +125,7 @@ fun AppNavigation() {
     var mostrarSheetOpinar by remember { mutableStateOf(false) }
     var creditoParaOpinar by remember { mutableStateOf<m_CreditoDetalle?>(null) }
     var mostrarDialogoInactividad by remember { mutableStateOf(false) }
-
-    // Verificación de sesión inicial
+//ficación de sesión inicial
     LaunchedEffect(Unit) {
         try {
             if (repoAuth.isLogged() && sessionPrefs.obtenerCorreo().isNotBlank()) {
@@ -118,6 +134,8 @@ fun AppNavigation() {
                 empleadoCargado?.let { emp ->
                     reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
                 }
+                // ✅ Cargar rol aquí también — no solo en onLoginSuccess
+                rolUsuario = repoAuth.cargarRolUsuario()
                 startDestination = "inicio"
             } else {
                 startDestination = "login"
@@ -137,8 +155,12 @@ fun AppNavigation() {
     val navBackStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val usuarioLogueado = currentRoute != null && currentRoute != "login"
-    val mostrarMenu = currentRoute in setOf("inicio", "catalogo", "credito", "perfil")
-
+    val rutasMenu = when (rolUsuario) {
+        "Gestor Precios" -> setOf("inicio", "catalogo", "perfil")         // sin crédito
+        "Administrador"  -> setOf("inicio", "catalogo", "credito", "perfil", "admin")
+        else             -> setOf("inicio", "catalogo", "credito", "perfil")
+    }
+    val mostrarMenu = currentRoute in rutasMenu
     // Lógica de Logout
     val hacerLogoutCompleto: () -> Unit = {
         repoAuth.logout()
@@ -155,6 +177,38 @@ fun AppNavigation() {
         habilitado = usuarioLogueado && !mostrarDialogoInactividad,
         onTimeout = { mostrarDialogoInactividad = true }
     )
+
+    LaunchedEffect(empleadoCargado?.codigoEmpleado) {
+        val codigo = empleadoCargado?.codigoEmpleado ?: return@LaunchedEffect
+
+        while (true) {
+            try {
+                val reservas = repocreditos.obtenerReservasParaNotificar(codigo)
+                val yaNotificados = sessionPrefs.obtenerIdsNotificados().toMutableSet()
+
+                reservas.forEach { reserva ->
+                    if (reserva.id !in yaNotificados) {
+                        val emoji = if (reserva.estado == "Aprobado") "✅" else "❌"
+                        mostrarNotificacion(
+                            context = context,
+                            titulo  = "$emoji Reserva ${reserva.estado}",
+                            mensaje = "Tu reserva de ${reserva.productoNombre} fue ${reserva.estado}."
+                        )
+                        yaNotificados.add(reserva.id)
+                    }
+                }
+                sessionPrefs.guardarIdsNotificados(yaNotificados)
+
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // ✅ deja que Compose la cancele al hacer logout
+            } catch (e: Exception) {
+                Log.e("POLLING", "Error: ${e.message}")
+            }
+
+            delay(30_000L)  // ✅ espera 30s antes de volver a consultar
+        }
+    }
+
 
     // Diálogo de inactividad
     if (mostrarDialogoInactividad) {
@@ -203,6 +257,7 @@ fun AppNavigation() {
                 ) {
                     Text("Entendido", color = Color.White)
                 }
+
             }
         )
     }
@@ -213,26 +268,36 @@ fun AppNavigation() {
             .detectarActividad { resetTimer() },
         bottomBar = {
             if (mostrarMenu) {
+                // 1. Creamos la lista basada estrictamente en el rol actual
+                val itemsMenu = when (rolUsuario) {
+                    "Gestor Precios" -> listOf("Inicio", "Catálogo", "Perfil")
+                    else             -> listOf("Inicio", "Catálogo", "Mi Crédito", "Perfil")
+                }
+
                 MenuInferiorComisariato(
+                    items            = itemsMenu,
                     itemSeleccionado = when (currentRoute) {
-                        "inicio"  -> "Inicio"
+                        "inicio"   -> "Inicio"
                         "catalogo" -> "Catálogo"
-                        "credito" -> "Mi Crédito"
-                        "perfil"  -> "Perfil"
-                        else      -> "Inicio"
+                        "credito"  -> "Mi Crédito"
+                        "perfil"   -> "Perfil"
+                        else       -> "Inicio"
                     },
                     onItemClick = { item ->
-                        val ruta = when (item) {
-                            "Inicio"     -> "inicio"
-                            "Catálogo"   -> "catalogo"
-                            "Mi Crédito" -> "credito"
-                            "Perfil"     -> "perfil"
-                            else         -> "inicio"
-                        }
-                        nav.navigate(ruta) {
-                            popUpTo("inicio") { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+                        // 2. Aquí está el truco: Solo navegamos si el ítem está en nuestra lista permitida
+                        if (item in itemsMenu) {
+                            val ruta = when (item) {
+                                "Inicio"     -> "inicio"
+                                "Catálogo"   -> "catalogo"
+                                "Mi Crédito" -> "credito"
+                                "Perfil"     -> "perfil"
+                                else         -> "inicio"
+                            }
+                            nav.navigate(ruta) {
+                                popUpTo("inicio") { saveState = true }
+                                launchSingleTop = true
+                                restoreState    = true
+                            }
                         }
                     }
                 )
@@ -256,8 +321,28 @@ fun AppNavigation() {
                                     empleadoCargado?.let { emp ->
                                         reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
                                     }
-                                } catch (e: Exception) { }
-                                nav.navigate("inicio") { popUpTo("login") { inclusive = true } }
+                                    // ✅ Carga el rol en variable local antes de navegar
+                                    val rol = repoAuth.cargarRolUsuario()
+                                    rolUsuario = rol
+
+                                    val nombre = empleadoCargado?.nombres ?: "Usuario"
+                                    mostrarNotificacion(
+                                        context = context,
+                                        titulo  = "¡Bienvenido, $nombre $rol!  ",
+                                        mensaje = "Sesión iniciada correctamente en Comisariato."
+                                    )
+
+                                    // ✅ Redirige según rol usando variable local (nunca null)
+                                    val destino = when (rol) {
+                                        "Gestor Precios" -> "gestion_precios"
+                                        "Administrador"  -> "admin"
+                                        else             -> "inicio"
+                                    }
+                                    nav.navigate(destino) { popUpTo("login") { inclusive = true } }
+
+                                } catch (e: Exception) {
+                                    nav.navigate("inicio") { popUpTo("login") { inclusive = true } }
+                                }
                             }
                         }
                     )
@@ -275,6 +360,7 @@ fun AppNavigation() {
                                 restoreState = true
                             }
                         },
+                        rolUsuario = rolUsuario,
                         onIrCredito = {
                             nav.navigate("credito") {
                                 popUpTo("inicio") { saveState = true }
@@ -445,10 +531,23 @@ fun AppNavigation() {
                                 onConfirmar = {
                                     scope.launch {
                                         empleadoCargado?.let { emp ->
-                                            reservasEmpleado =
-                                                repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+                                            reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
+
+                                            // ✅ Guardar IDs de reservas pendientes para no re-notificar
+                                            val pendientes = reservasEmpleado
+                                                .filter { it.estado == "Pendiente" }
+                                                .map { it.id }
+                                                .toSet()
+                                            val yaNotificados = sessionPrefs.obtenerIdsNotificados().toMutableSet()
+                                            yaNotificados.addAll(pendientes)
+                                            sessionPrefs.guardarIdsNotificados(yaNotificados)
                                         }
                                     }
+                                    mostrarNotificacion(
+                                        context = context,
+                                        titulo  = "Reserva enviada",
+                                        mensaje = "Tu reserva de ${prod.nombre} fue registrada. Te avisaremos cuando sea revisada."
+                                    )
                                     nav.popBackStack()
                                 }
                             )

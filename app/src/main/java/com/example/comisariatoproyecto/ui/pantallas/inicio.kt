@@ -74,6 +74,7 @@ private val PageBg        = Color(0xFFEEF1F8)
 fun PantallaInicio(
     repo: r_permisos,
     repoCreditos: r_Creditos,
+    rolUsuario: String?,       // ✅ nuevo
     onLogout: () -> Unit,
     onIrCatalogo: () -> Unit,
     onIrCredito: () -> Unit
@@ -309,9 +310,12 @@ fun PantallaInicio(
             )
 
             Spacer(Modifier.height(4.dp))
-            EtiquetaSeccion("Acceso rápido")
+            if (rolUsuario != "Gestor Precios") {
+                EtiquetaSeccion("Acceso rápido")
+            }
             Spacer(Modifier.height(8.dp))
             FilaAccesoRapido(
+                rolUsuario   = rolUsuario,   // ✅ nuevo
                 onIrCatalogo = onIrCatalogo,
                 onIrCredito  = onIrCredito
             )
@@ -435,11 +439,14 @@ fun HeaderInicio(
                         fontSize = 12.sp
                     )
                     Text(
-                        empleado?.nombreCompleto ?: "Usuario",
+                        empleado?.nombreCompleto ?: "Usuario" ,
+
                         color      = SurfaceWhite,
                         fontSize   = 20.sp,
                         fontWeight = FontWeight.Medium
                     )
+                    Spacer(Modifier.height(4.dp))
+
                 }
             }
         }
@@ -651,6 +658,7 @@ fun CardConteo(
 // ─── Acceso rápido ────────────────────────────────────────────────────────────
 @Composable
 fun FilaAccesoRapido(
+    rolUsuario: String?,
     onIrCatalogo: () -> Unit,
     onIrCredito: () -> Unit
 ) {
@@ -658,24 +666,28 @@ fun FilaAccesoRapido(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        CardAcceso(
-            modifier  = Modifier.weight(1f),
-            etiqueta  = "Explorar",
-            sublabel  = "Catálogo ↗",
-            iconoBg   = Color(0xFFEEF0FE),
-            iconoTint = Color(0xFF3C3489),
-            icono     = Icons.Outlined.ShoppingBag,
-            onClick   = onIrCatalogo
-        )
-        CardAcceso(
-            modifier  = Modifier.weight(1f),
-            etiqueta  = "Mis reservas",
-            sublabel  = "Historial ↗",
-            iconoBg   = GreenContainer,
-            iconoTint = GreenPrimary,
-            icono     = Icons.Outlined.Description,
-            onClick   = onIrCredito
-        )
+        if (rolUsuario != "Gestor Precios") {
+            CardAcceso(
+                modifier = Modifier.weight(1f),
+                etiqueta = "Explorar",
+                sublabel = "Catálogo ↗",
+                iconoBg = Color(0xFFEEF0FE),
+                iconoTint = Color(0xFF3C3489),
+                icono = Icons.Outlined.ShoppingBag,
+                onClick = onIrCatalogo
+            )
+        }
+        if (rolUsuario != "Gestor Precios") {
+            CardAcceso(
+                modifier = Modifier.weight(1f),
+                etiqueta = "Mis reservas",
+                sublabel = "Historial ↗",
+                iconoBg = GreenContainer,
+                iconoTint = GreenPrimary,
+                icono = Icons.Outlined.Description,
+                onClick = onIrCredito
+            )
+        }
     }
 }
 

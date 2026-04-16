@@ -25,6 +25,7 @@ data class Empleado(
     /** ID del departamento al que pertenece */
     val departamentoId: String = "",
 
+
     /**
      * Nombre del departamento.
      * Se usa PropertyName para asegurar compatibilidad con Firestore.

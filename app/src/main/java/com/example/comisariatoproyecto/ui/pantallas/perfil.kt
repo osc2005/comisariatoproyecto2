@@ -220,12 +220,12 @@ fun PerfilScreen(
 
                             // ── TAB LABORAL ───────────────────────────────────
                             PerfilTab.Laboral -> {
-                              SeccionLabel("Datos laborales")
+                                SeccionLabel("Datos laborales")
                                 TarjetaDato(Icons.Outlined.MonetizationOn,
                                     "Salario", empleado?.salarioFormateado ?: "—")
                                 TarjetaDato(Icons.Outlined.Work,
-                                    "Departamento", empleado?.departamentoNombre?: "—")
-                                  TarjetaDato(Icons.Outlined.DateRange,
+                                    "Rol", empleado?.departamentoNombre?: "—")
+                                TarjetaDato(Icons.Outlined.DateRange,
                                     "Fecha de inicio", empleado?.fechaFormateada ?: "—")
 
                             }
@@ -243,6 +243,7 @@ fun PerfilScreen(
                                     etiqueta = "Correo personal",
                                     valor    = usuario!!.correoPersonal.ifEmpty { "—" }
                                 )
+
 
                             }
                         }

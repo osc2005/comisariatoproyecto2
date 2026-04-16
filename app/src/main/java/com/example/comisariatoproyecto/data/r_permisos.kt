@@ -243,5 +243,33 @@ class r_permisos {
         }
     }
 
+    suspend fun cargarRolUsuario(): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val correo = auth.currentUser?.email ?: return@withContext "sin_sesion"
+
+                val snap = db.collection("usuarios")
+                    .whereEqualTo("correo", correo)
+                    .get()
+                    .await()
+
+                if (snap.isEmpty) {
+                    Log.w(TAG, "No existe usuario con correo=$correo")
+                    return@withContext "error_no_existe"
+                }
+
+                val rol = snap.documents[0].getString("rolNombre") ?: "empleado"
+                Log.d("FirebaseOK", "Rol cargado: $rol")
+                rol
+
+            } catch (e: Exception) {
+                Log.e("FirebaseError", "Error al leer rol: ${e.message}")
+                "error_db"
+            }
+        }
+    }
+
+
+
 
 }

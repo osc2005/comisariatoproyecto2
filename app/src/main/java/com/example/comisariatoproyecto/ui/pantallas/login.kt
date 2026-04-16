@@ -517,6 +517,30 @@ fun LoginComisariatoScreen(
                             HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                             Text("  o  ", fontSize = 12.sp, color = TextSecondary)
                         }
+                        Spacer(Modifier.height(24.dp))
+
+                        // ── BOTÓN PARA OTRA CUENTA (EL QUE NECESITABAS) ──
+                        TextButton(
+                            onClick = {
+                                // Limpiamos todo para permitir un login nuevo
+                                sessionPrefs.limpiarSesionLocal()
+                                correo              = ""
+                                password            = ""
+                                correoBloquado      = false
+                                biometriaDisponible = false
+                                modoPrimeraVez      = true
+                                errorPassword       = ""
+                                errorCorreo         = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "Ingresar con otra cuenta",
+                                color = Navy600,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
 
                     }
                 }
