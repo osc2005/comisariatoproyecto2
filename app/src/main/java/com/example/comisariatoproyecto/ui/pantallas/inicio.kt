@@ -286,6 +286,12 @@ fun PantallaInicio(
             cantidadNotif       = notificacionesPendientes.size,
             onVerNotificaciones = { mostrarPopupNotif = true }
         )
+        Text(
+            text = "Rol detectado: ${repo.rolActual}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
 
         Column(
             modifier = Modifier
@@ -311,10 +317,13 @@ fun PantallaInicio(
             Spacer(Modifier.height(4.dp))
             EtiquetaSeccion("Acceso rápido")
             Spacer(Modifier.height(8.dp))
-            FilaAccesoRapido(
-                onIrCatalogo = onIrCatalogo,
-                onIrCredito  = onIrCredito
-            )
+            if (repo.rolActual == "Empleado"){
+                FilaAccesoRapido(
+                    onIrCatalogo = onIrCatalogo,
+                    onIrCredito  = onIrCredito
+                )
+            }
+
 
             Spacer(Modifier.height(32.dp))
         }

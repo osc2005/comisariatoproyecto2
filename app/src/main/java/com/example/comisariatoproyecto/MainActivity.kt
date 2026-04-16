@@ -48,8 +48,30 @@ import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.initialize
 import kotlinx.coroutines.launch
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+
 
 class MainActivity : FragmentActivity() {
+
+    companion object {
+        fun enviarNotificacionOTP(contexto: Context, titulo: String, mensaje: String) {
+            val builder = NotificationCompat.Builder(contexto, "canal_id") // Usa el mismo ID que en crearCanalNotificaciones
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(titulo)
+                .setContentText(mensaje)
+                .setPriority(NotificationCompat.PRIORITY_HIGH) // Prioridad alta para que flote
+                .setAutoCancel(true)
+
+            if (ActivityCompat.checkSelfPermission(contexto, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                NotificationManagerCompat.from(contexto).notify(1001, builder.build())
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Firebase.initialize(context = this)
@@ -57,6 +79,15 @@ class MainActivity : FragmentActivity() {
             PlayIntegrityAppCheckProviderFactory.getInstance()
         )
         crearCanalNotificaciones(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                101
+            )
+        }
+
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         enableEdgeToEdge()
         setContent {
@@ -118,6 +149,7 @@ fun AppNavigation() {
                 empleadoCargado?.let { emp ->
                     reservasEmpleado = repocreditos.obtenerReservasDeEmpleado(emp.codigoEmpleado)
                 }
+                repoAuth.cargarRolUsuario()
                 startDestination = "inicio"
             } else {
                 startDestination = "login"

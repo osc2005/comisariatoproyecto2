@@ -37,6 +37,12 @@ import com.example.comisariatoproyecto.data.r_permisos
 import com.example.comisariatoproyecto.ui.theme.NavyPrimary
 import com.example.comisariatoproyecto.utils.SessionPrefs
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.KeyboardType
+import com.example.comisariatoproyecto.MainActivity
+import kotlinx.coroutines.CoroutineScope
 
 // ── Paleta ───────────────────────────────────────────────────────────────────
 private val Navy900       = Color(0xFF0B1D3A)
@@ -73,6 +79,15 @@ fun LoginComisariatoScreen(
     var mostrarModoInactivo by remember { mutableStateOf(false) }
     // ← Bloquea el campo correo después de un intento con cuenta inactiva
     var correoBloquado      by remember { mutableStateOf(false) }
+
+    // Define los estados posibles para la segunda fase
+    var subModoAutenticacion by remember { mutableStateOf("SELECCION") } // "SELECCION", "OTP", "BIOMETRICO"
+    var otpIngresado by remember { mutableStateOf("") }
+    var otpGenerado by remember { mutableStateOf("") }
+    var errorOtp by remember { mutableStateOf("") }
+
+    // Función simple para generar OTP
+    fun generarCodigoOTP(): String = (100000..999999).random().toString()
 
     val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
     val circleOffset by infiniteTransition.animateFloat(
@@ -404,120 +419,94 @@ fun LoginComisariatoScreen(
                         }
 
                     } else {
-                        // ── MODO BIOMETRÍA ────────────────────────────────────
+                        // ── MODO AUTENTICACIÓN SECUNDARIA (Biometría u OTP) ──
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp).height(4.dp)
-                                .clip(CircleShape)
-                                .background(BorderColor)
-                        )
-                        Spacer(Modifier.height(32.dp))
+                            // Cabecera común (Avatar y nombre)
+                            HeaderUsuario(nombreGuardado, sessionPrefs.obtenerCorreo())
 
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(Brush.verticalGradient(listOf(Navy600, Navy900)))
-                                .border(3.dp, White, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text       = nombreGuardado.firstOrNull()?.uppercaseChar()?.toString() ?: "U",
-                                fontSize   = 28.sp,
-                                fontWeight = FontWeight.Bold,
-                                color      = White
-                            )
-                        }
+                            AnimatedContent(targetState = subModoAutenticacion) { estado ->
+                                when (estado) {
+                                    "SELECCION" -> {
+                                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("Elige un método para ingresar", fontSize = 14.sp, color = TextSecondary)
+                                            Spacer(Modifier.height(24.dp))
 
-                        Spacer(Modifier.height(16.dp))
-
-                        Text(nombreGuardado.ifBlank { "Usuario" }, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(4.dp))
-                        Text(sessionPrefs.obtenerCorreo(), fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
-
-                        Spacer(Modifier.height(32.dp))
-
-                        val pulseAnim by rememberInfiniteTransition(label = "pulse").animateFloat(
-                            initialValue  = 0.85f,
-                            targetValue   = 1f,
-                            animationSpec = infiniteRepeatable(tween(1200, easing = EaseInOutSine), RepeatMode.Reverse),
-                            label         = "pulse_scale"
-                        )
-
-                        Box(contentAlignment = Alignment.Center) {
-                            Box(
-                                modifier = Modifier
-                                    .size((72 * pulseAnim).dp)
-                                    .clip(CircleShape)
-                                    .background(Navy600.copy(alpha = 0.08f))
-                            )
-                            Button(
-                                onClick = {
-                                    activity?.let { act ->
-                                        autenticarConBiometria(act) {
-                                            val correoGuardado = sessionPrefs.obtenerCorreo()
-                                            val passGuardado   = sessionPrefs.obtenerPassword()
-                                            if (correoGuardado.isEmpty() || passGuardado.isEmpty()) {
-                                                errorPassword  = "No hay sesión guardada."
-                                                modoPrimeraVez = true
-                                                return@autenticarConBiometria
+                                            // Botón Biométrico
+                                            OpcionAuthButton(
+                                                texto = "Usar Huella Digital",
+                                                icon = Icons.Outlined.Fingerprint,
+                                                color = Navy600
+                                            ) {
+                                                // Ejecuta la lógica biométrica que ya tienes
+                                                ejecutarBiometria(activity, repo, sessionPrefs, scope, onLoginSuccess)
                                             }
-                                            scope.launch {
-                                                isLoading = true
-                                                val resultado = repo.loginSilencioso(correoGuardado, passGuardado)
-                                                isLoading = false
-                                                when (resultado) {
-                                                    LoginResult.activo -> onLoginSuccess()
-                                                    LoginResult.inactivo -> {
-                                                        sessionPrefs.desactivarBiometria()
-                                                        sessionPrefs.limpiarSesionLocal()
-                                                        correo              = correoGuardado
-                                                        biometriaDisponible = false
-                                                        correoBloquado      = true  // ← bloquea el correo
-                                                        mostrarModoInactivo = true
-                                                        errorPassword       = ""
-                                                    }
-                                                    LoginResult.ERROR_CREDENCIALES ->
-                                                        errorPassword = "No se pudo autenticar. Iniciá sesión manualmente."
-                                                }
+
+                                            Spacer(Modifier.height(12.dp))
+
+                                            // Botón OTP
+                                            OpcionAuthButton(
+                                                texto = "Recibir código por notificación",
+                                                icon = Icons.Outlined.Lock,
+                                                color = Color(0xFF6366F1)
+                                            ) {
+                                                otpGenerado = generarCodigoOTP()
+                                                MainActivity.enviarNotificacionOTP(
+                                                    context,
+                                                    "Su codigo de acceso de un solo uso",
+                                                    "Su codigo es: ${otpGenerado}")
+                                                subModoAutenticacion = "OTP"
                                             }
                                         }
                                     }
-                                },
-                                modifier       = Modifier.size(60.dp),
-                                enabled        = !isLoading,
-                                shape          = CircleShape,
-                                colors         = ButtonDefaults.buttonColors(
-                                    containerColor         = Navy600,
-                                    disabledContainerColor = Navy600.copy(alpha = 0.4f)
-                                ),
-                                contentPadding = PaddingValues(0.dp),
-                                elevation      = ButtonDefaults.buttonElevation(0.dp)
-                            ) {
-                                if (isLoading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = White, strokeWidth = 2.dp)
-                                } else {
-                                    Icon(Icons.Outlined.Fingerprint, null, tint = White, modifier = Modifier.size(28.dp))
+
+                                    "OTP" -> {
+                                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("Introduce el código enviado", fontSize = 14.sp, color = TextSecondary)
+                                            Spacer(Modifier.height(16.dp))
+
+                                            OutlinedTextField(
+                                                value = otpIngresado,
+                                                onValueChange = { if(it.length <= 6) otpIngresado = it },
+                                                placeholder = { Text("000000") },
+                                                modifier = Modifier.width(150.dp),
+                                                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, letterSpacing = 4.sp),
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                singleLine = true,
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+
+                                            if (errorOtp.isNotEmpty()) ErrorText(errorOtp, centered = true)
+
+                                            Spacer(Modifier.height(20.dp))
+
+                                            Button(
+                                                onClick = {
+                                                    if (otpIngresado == otpGenerado) {
+                                                        // El código coincide, procedemos al login silencioso
+                                                        ejecutarLoginSilencioso(repo, sessionPrefs, scope, onLoginSuccess)
+                                                    } else {
+                                                        errorOtp = "Código incorrecto"
+                                                    }
+                                                },
+                                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                                                shape = RoundedCornerShape(14.dp)
+                                            ) {
+                                                Text("Verificar e Ingresar")
+                                            }
+
+                                            TextButton(onClick = { subModoAutenticacion = "SELECCION"; errorOtp = "" }) {
+                                                Text("Volver", color = TextSecondary)
+                                            }
+                                        }
+                                    }
                                 }
                             }
+
+                            // El botón de "Usar otra cuenta" se mantiene al final
+                            Spacer(Modifier.height(24.dp))
+                            BotonUsarOtraCuenta { modoPrimeraVez = true }
                         }
-
-                        Spacer(Modifier.height(16.dp))
-                        Text("Tocá para iniciar sesión biometricamente", fontSize = 13.sp, color = TextSecondary, textAlign = TextAlign.Center)
-
-                        if (errorPassword.isNotEmpty()) {
-                            Spacer(Modifier.height(12.dp))
-                            ErrorText(errorPassword, centered = true)
-                        }
-
-                        Spacer(Modifier.height(24.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
-                            Text("  o  ", fontSize = 12.sp, color = TextSecondary)
-                        }
-
                     }
                 }
             }
@@ -579,4 +568,98 @@ private fun DrawScope.drawDecorativeCircles(offset: Float) {
         radius = size.width * 0.3f,
         center = Offset(size.width * 0.5f, size.height * (0.25f + offset * 0.02f))
     )
+}
+
+// Función genérica para el login final
+private fun ejecutarLoginSilencioso(
+    repo: r_permisos,
+    sessionPrefs: SessionPrefs,
+    scope: CoroutineScope,
+    onSuccess: () -> Unit
+) {
+    val correo = sessionPrefs.obtenerCorreo()
+    val pass = sessionPrefs.obtenerPassword()
+
+    scope.launch {
+        val resultado = repo.loginSilencioso(correo, pass)
+        if (resultado == LoginResult.activo) onSuccess()
+        else { /* Manejar error o cuenta inactiva */ }
+    }
+}
+
+@Composable
+fun OpcionAuthButton(texto: String, icon: ImageVector, color: Color, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, BorderColor),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+    ) {
+        Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(texto, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun HeaderUsuario(nombre: String, correo: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(Brush.verticalGradient(listOf(Navy600, Navy900)))
+                .border(3.dp, Color.White, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "U",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(nombre.ifBlank { "Usuario" }, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(correo, fontSize = 13.sp, color = TextSecondary)
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun BotonUsarOtraCuenta(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, BorderColor),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+    ) {
+        Text("Usar otra cuenta", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+private fun ejecutarBiometria(
+    activity: FragmentActivity?,
+    repo: r_permisos,
+    sessionPrefs: SessionPrefs,
+    scope: CoroutineScope,
+    onLoginSuccess: () -> Unit
+) {
+    activity?.let { act ->
+        autenticarConBiometria(act) {
+            val correoGuardado = sessionPrefs.obtenerCorreo()
+            val passGuardado = sessionPrefs.obtenerPassword()
+
+            if (correoGuardado.isNotEmpty() && passGuardado.isNotEmpty()) {
+                scope.launch {
+                    val resultado = repo.loginSilencioso(correoGuardado, passGuardado)
+                    if (resultado == LoginResult.activo) {
+                        onLoginSuccess()
+                    }
+                }
+            }
+        }
+    }
 }

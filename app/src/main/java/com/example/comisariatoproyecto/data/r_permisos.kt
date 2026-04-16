@@ -1,6 +1,9 @@
 package com.example.comisariatoproyecto.data
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +16,8 @@ class r_permisos {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
+    var rolActual by mutableStateOf("")
+
     companion object {
         private const val TAG = "r_permisos"
     }
@@ -24,6 +29,7 @@ class r_permisos {
         return withContext(Dispatchers.IO) {
             try {
                 auth.signInWithEmailAndPassword(email, password).await()
+                cargarRolUsuario()
 
                 val estaActivo = verificarEstadoUsuario(email.trim())
                 if (!estaActivo) {
@@ -240,6 +246,34 @@ class r_permisos {
                 Log.e(TAG, "Error verificando estado: ${e.message}")
                 false
             }
+        }
+    }
+
+    fun cargarRolUsuario() {
+        // Usamos el ID del usuario actual
+        val user = auth.currentUser
+        val correo = user?.email
+
+        if (correo != null) {
+            db.collection("usuarios")
+                .whereEqualTo("correo",correo)
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    if (!querySnapshot.isEmpty) {
+                        val document = querySnapshot.documents[0]
+                        val rolDb = document.getString("rolNombre") ?: "empleado"
+                        rolActual = rolDb
+                        Log.d("FirebaseOK", "Rol cargado: $rolDb")
+                    } else {
+                        rolActual = "error_no_existe"
+                    }
+                }
+                .addOnFailureListener { e ->
+                    rolActual = "error_db"
+                    Log.e("FirebaseError", "Error al leer: ${e.message}")
+                }
+        } else {
+            rolActual = "cargando..."
         }
     }
 
